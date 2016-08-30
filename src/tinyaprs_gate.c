@@ -15,6 +15,8 @@
 #include <netinet/in.h>
 
 #include "tier2_client.h"
+#include "tnc_connector.h"
+#include "beacon.h"
 
 Config config = {
 		.host = "t2xwt.aprs2.net",
@@ -79,8 +81,18 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
+	rc = tnc_init("/dev/ttyUSB0",9600);
+	if(rc < 0){
+		printf("ERROR initialize the TNC module, aborted\n");
+		exit(1);
+	}
+
+	beacon_init();
+
 	while(true){
 		tier2_client_run();
+		tnc_run();
+		beacon_run();
 		poll_run();
 	}
 }
