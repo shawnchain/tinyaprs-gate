@@ -74,13 +74,13 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 	strncpy(filter,_filter,511);
 	port = _port;
 
-	printf("Connecting to %s:%u\n", host, port);
+	INFO("Connecting to %s:%u", host, port);
 
 	int rc;
 	rc = tier2_client_connect();
 	if(rc == -EAGAIN){
 		// resolve ok but connect failed, will retry later
-		printf("WARNING: Connect to '%s' temporarily failed, will re-connect later.\n", host);
+		WARN("Connect to '%s' temporarily failed, will re-connect later.", host);
 	}else if(rc == -EINVAL){
 		fprintf(stderr, "*** Invalid address pair '%s'.\n", host);
 		return -1;
@@ -88,7 +88,7 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 		fprintf(stderr, "*** Unable to connect to '%s'.\n", host);
 		return -1;
 	}else{
-		printf("Connected to %s:%u\n", host, port);
+		INFO("Connected to %s:%u", host, port);
 	}
 
 	return 0;
@@ -103,13 +103,13 @@ int tier2_client_run(){
 	if(state == state_disconnected){
 		// try to reconnect
 		if(t - last_reconnect > RECONNECT_TIMEOUT){
-			printf("reconnecting...\n");
+			INFO("reconnecting...");
 			tier2_client_connect();
 		}
 	}else{
 		if(t - last_recv > IDLE_TIMEOUT){
 			// try to reconnect as we have 90s idle, as the server will push every 20 seconds
-			printf("IDLE timeout, reconnecting...\n");
+			INFO("IDLE timeout, reconnecting...");
 			tier2_client_disconnect();
 			tier2_client_connect();
 		}
@@ -134,7 +134,7 @@ static int tier2_client_connect() {
 
 	if ((rc = resolve_hostname(host, &server_addr)) < 0) {
 		// resolve host error, bail out
-		printf("resolve hostname %s failed, connect aborted.",host);
+		WARN("resolve hostname %s failed, connect aborted.",host);
 		return rc;
 	}
 
@@ -142,7 +142,7 @@ static int tier2_client_connect() {
 	char s_server_addr[50];
 	inet_ntop(server_addr.sa.sa_family, addr_of_sockaddr(&server_addr),
 			s_server_addr, sizeof(s_server_addr));
-	printf("Resolved to %s:%u\n", s_server_addr, ntohs(port_of_sockaddr(&server_addr)));
+	INFO("Resolved to %s:%u", s_server_addr, ntohs(port_of_sockaddr(&server_addr)));
 
 	if ((sockfd = socket((&server_addr)->sa.sa_family, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		fprintf(stderr, "*** socket() failed: %s.\n", strerror(errno));
@@ -168,7 +168,7 @@ static int tier2_client_disconnect(){
 		close(sockfd);
 		sockfd = -1;
 	}
-	printf("tier2_client_disconnect()\n");
+	INFO("tier2_client_disconnect()");
 	return 0;
 }
 
@@ -224,7 +224,7 @@ static int tier2_client_send(const char* data,size_t len){
 
 // keep alive
 static void tier2_client_keepalive() {
-	printf("Sending keep-alive command: %s",KEEPALIVE_CMD);
+	INFO("Sending keep-alive command: %s",KEEPALIVE_CMD);
 	tier2_client_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
 	last_keepalive = time(NULL);
 }

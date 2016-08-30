@@ -77,13 +77,13 @@ int main(int argc, char* argv[]){
 	int rc = tier2_client_init(config.host,config.port,"foo","bar","");
 	if(rc < 0){
 		// igate init error
-		printf("ERROR initialize the APRS tier2 client, aborted\n");
+		fprintf(stderr,"ERROR initialize the APRS tier2 client, aborted\n");
 		exit(1);
 	}
 
 	rc = tnc_init("/dev/ttyUSB0",9600);
 	if(rc < 0){
-		printf("ERROR initialize the TNC module, aborted\n");
+		fprintf(stderr,"ERROR initialize the TNC module, aborted\n");
 		exit(1);
 	}
 

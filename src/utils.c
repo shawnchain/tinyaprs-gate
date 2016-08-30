@@ -18,12 +18,28 @@
 #include <sys/uio.h>
 #include <time.h>
 #include <signal.h>
+#include <stdarg.h>
 
 
 #include "utils.h"
 
-int resolve_hostname(const char *hostname, struct sockaddr_inx *sa)
-{
+void _log(const char* tag, const char* msg, ...) {
+	char string[512];
+	va_list args;
+	va_start(args,msg);
+	vsnprintf(string,511,msg,args);
+
+	char stime[32];
+	time_t current_time;
+	struct tm * time_info;
+	time(&current_time);
+	time_info = localtime(&current_time);
+	strftime(stime, 32, "%Y-%m-%d %H:%M:%S", time_info);
+
+	printf("%s [%s] - %s\n", stime, tag, string);
+}
+
+int resolve_hostname(const char *hostname, struct sockaddr_inx *sa) {
 	struct addrinfo hints, *result;
 	char s_port[10] = "";
 	int port = 14580, rc;
@@ -124,7 +140,7 @@ int poll_add(int fd, poll_callback callback){
 			if(fd > maxfd){
 				maxfd = fd;
 			}
-			printf("Add fd %d to poll list, maxfd is %d\n",fd,maxfd);
+			DBG("Add fd %d to poll list, maxfd is %d\n",fd,maxfd);
 			return i;
 		}
 	}
@@ -144,7 +160,7 @@ int poll_remove(int fd){
 					}
 				}
 			}
-			printf("Remove fd %d from poll list, maxfd is %d\n",fd,maxfd);
+			DBG("Remove fd %d from poll list, maxfd is %d\n",fd,maxfd);
 			return i;
 		}
  	}
