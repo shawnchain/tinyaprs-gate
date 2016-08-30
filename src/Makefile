@@ -1,7 +1,7 @@
 #
-# Copyright (c) 2015 Justin Liu
-# Author: Justin Liu <rssnsj@gmail.com>
-# https://github.com/rssnsj/minivtun
+# Copyright (c) 2015 Justin Lopyright (c) 2016 Shawn Chain
+# Author: Shawn Chain (shawn.chain@gmail.com)
+# https://github.com/shawnchain/tinyaprs-gate/
 #
 
 ifeq ($(PREFIX),)
