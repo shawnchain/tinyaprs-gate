@@ -9,9 +9,9 @@
 #define SRC_TNC_CONNECTOR_H_
 
 /**
- *
+ * Initialize the TNC
  */
-int tnc_init();
+int tnc_init(const char* devName, unsigned int baudrate, const char* model, char** initCmds);
 
 /**
  *

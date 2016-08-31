@@ -36,7 +36,11 @@ void _log(const char* tag, const char* msg, ...) {
 	time_info = localtime(&current_time);
 	strftime(stime, 32, "%Y-%m-%d %H:%M:%S", time_info);
 
-	printf("%s [%s] - %s\n", stime, tag, string);
+	if(strncmp("ERROR",tag,5) == 0){
+		fprintf(stderr,"%s [%s] - %s\n", stime, tag, string);
+	}else{
+		printf("%s [%s] - %s\n", stime, tag, string);
+	}
 }
 
 int resolve_hostname(const char *hostname, struct sockaddr_inx *sa) {
@@ -140,7 +144,7 @@ int poll_add(int fd, poll_callback callback){
 			if(fd > maxfd){
 				maxfd = fd;
 			}
-			DBG("Add fd %d to poll list, maxfd is %d\n",fd,maxfd);
+			DBG("Add fd %d to poll list, maxfd is %d",fd,maxfd);
 			return i;
 		}
 	}

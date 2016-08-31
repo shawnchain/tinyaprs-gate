@@ -56,6 +56,7 @@ int do_daemonize(void);
 #define DBG(msg, ...)  _log("DEBUG",msg, ##__VA_ARGS__)
 #define INFO(msg, ...) _log("INFO ",msg, ##__VA_ARGS__)
 #define WARN(msg, ...) _log("WARN ",msg, ##__VA_ARGS__)
+#define ERROR(msg, ...) _log("ERROR",msg, ##__VA_ARGS__)
 
 void _log(const char* tag, const char* message, ...);
 

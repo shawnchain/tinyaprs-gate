@@ -41,7 +41,7 @@ static struct sockaddr_inx server_addr;
 
 static int tier2_client_connect();
 static int tier2_client_disconnect();
-static int tier2_client_receive();
+static int tier2_client_receive(int fd);
 static int tier2_client_send(const char* data,size_t len);
 static void tier2_client_keepalive();
 
@@ -82,10 +82,10 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 		// resolve ok but connect failed, will retry later
 		WARN("Connect to '%s' temporarily failed, will re-connect later.", host);
 	}else if(rc == -EINVAL){
-		fprintf(stderr, "*** Invalid address pair '%s'.\n", host);
+		ERROR("*** Invalid address pair '%s'.", host);
 		return -1;
 	}else if(rc < 0){
-		fprintf(stderr, "*** Unable to connect to '%s'.\n", host);
+		ERROR("*** Unable to connect to '%s'.", host);
 		return -1;
 	}else{
 		INFO("Connected to %s:%u", host, port);
@@ -145,7 +145,7 @@ static int tier2_client_connect() {
 	INFO("Resolved to %s:%u", s_server_addr, ntohs(port_of_sockaddr(&server_addr)));
 
 	if ((sockfd = socket((&server_addr)->sa.sa_family, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		fprintf(stderr, "*** socket() failed: %s.\n", strerror(errno));
+		ERROR("*** socket() failed: %s.", strerror(errno));
 		return -1;
 	}
 
@@ -217,14 +217,14 @@ static int tier2_client_send(const char* data,size_t len){
 	rc = send(sockfd,data,len,0);
 	if(rc < 0){
 		// something wrong
-		fprintf(stderr, "*** send(): %s.\n", strerror(errno));
+		ERROR("*** send(): %s.", strerror(errno));
 	}
 	return 0;
 }
 
 // keep alive
 static void tier2_client_keepalive() {
-	INFO("Sending keep-alive command: %s",KEEPALIVE_CMD);
+	INFO("Sending keep-alive command.");
 	tier2_client_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
 	last_keepalive = time(NULL);
 }
