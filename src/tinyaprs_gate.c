@@ -77,7 +77,7 @@ int main(int argc, char* argv[]){
 	int rc = tier2_client_init(config.host,config.port,"foo","bar","");
 	if(rc < 0){
 		// igate init error
-		ERROR("*** error initialize the APRS tier2 client, aborted");
+		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
 #if 0
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]){
 #endif
 	rc = tnc_init(devName,9600,model,0);
 	if(rc < 0){
-		ERROR("*** error initialize the TNC module, aborted");
+		ERROR("*** error initialize the TNC module, aborted.");
 		exit(1);
 	}
 
