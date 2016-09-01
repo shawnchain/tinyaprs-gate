@@ -76,7 +76,43 @@ static void tnc_poll_callback(int fd, poll_state state){
 	}
 }
 
-static struct termios oldtio,newtio;
+int set_interface_attribs(int fd, int speed)
+{
+    struct termios tty;
+
+    if (tcgetattr(fd, &tty) < 0) {
+        ERROR("*** tcgetattr() :%s.", strerror(errno));
+        return -1;
+    }
+
+    cfsetospeed(&tty, (speed_t)speed);
+    cfsetispeed(&tty, (speed_t)speed);
+
+    tty.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;         /* 8-bit characters */
+    tty.c_cflag &= ~PARENB;     /* no parity bit */
+    tty.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
+    tty.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
+
+    /* setup for non-canonical mode */
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    tty.c_oflag &= ~OPOST;
+
+    /* fetch bytes as they become available */
+    tty.c_cc[VMIN] = 1;
+    tty.c_cc[VTIME] = 1;
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        ERROR("*** tcsetattr() :%s.", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+
+//static struct termios oldtio,newtio;
 static int tnc_open(){
 	if(state == state_open) return 0;
 
@@ -91,74 +127,80 @@ static int tnc_open(){
 	//fcntl(tncfd, F_SETFL, 0); // clear all flags
 	//fcntl(tncfd, F_SETFL, FNDELAY); // set read nonblocking
 
-	DBG("read old serial config");
-	bool hardflow = false;
-	tcgetattr(tncfd,&oldtio); /* save current port settings */
-	bzero(&newtio, sizeof(newtio));
-	memcpy(&newtio,&oldtio,sizeof(newtio));
-#if 1 //Non Canonical Input Processing
-	newtio.c_iflag &= ~(IMAXBEL|INPCK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IGNPAR);
-	newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // disable software flow control
-	newtio.c_iflag |= IGNBRK;
-
-	newtio.c_oflag &= ~OPOST; // unset the OPOST for raw output
-	//newtio.c_oflag |= (OPOST|ONLCR);
-
-	if (hardflow) {
-		newtio.c_cflag |= CRTSCTS;
-	} else {
-		newtio.c_cflag &= ~CRTSCTS;
-	}
-
-	newtio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ICANON|ISIG|IEXTEN|NOFLSH|TOSTOP|PENDIN);
-	newtio.c_cflag &= ~(CSIZE|PARENB|CSTOPB); // 8N1
-	newtio.c_cflag |= (CS8|CREAD|CLOCAL);
-	newtio.c_cc[VMIN] = 0;//80;
-	newtio.c_cc[VTIME] = 3;//3;
-
-//	newtio.c_iflag = IGNPAR;
-//	newtio.c_oflag = 0;
-//	/* set input mode (non-canonical, no echo,...) */
-//	newtio.c_lflag = 0;
-//	newtio.c_cc[VTIME]    = 3;   	/* inter-character timer unused */
-//	newtio.c_cc[VMIN]     = 80;   	/* blocking read until 5 chars received */
-
-	// setup the baud rate
-	cfsetispeed(&newtio, baudrate);
-	cfsetospeed(&newtio, baudrate);
-
-#else //Canonical Input Processing
-	/* set new port settings for canonical input processing */
-	newtio.c_cflag = baudrate | CRTSCTS | CS8 | CLOCAL | CREAD;
-	newtio.c_iflag = IGNPAR | INLCR;
-	newtio.c_oflag = 0;
-	newtio.c_lflag = ICANON;
-
-//	newtio.c_cc[VINTR]    = 0;     /* Ctrl-c */
-//	newtio.c_cc[VQUIT]    = 0;     /* Ctrl-\ */
-//	newtio.c_cc[VERASE]   = 0;     /* del */
-//	newtio.c_cc[VKILL]    = 0;     /* @ */
-//	newtio.c_cc[VEOF]     = 4;     /* Ctrl-d */
-	newtio.c_cc[VTIME]    = 0;     /* inter-character timer unused */
-	newtio.c_cc[VMIN]     = 1;     /* blocking read until 1 character arrives */
-//	newtio.c_cc[VSTART]   = 0;     /* Ctrl-q */
-//	newtio.c_cc[VSTOP]    = 0;     /* Ctrl-s */
-//	newtio.c_cc[VSUSP]    = 0;     /* Ctrl-z */
-//	newtio.c_cc[VEOL]     = 0;     /* '\0' */
-//	newtio.c_cc[VREPRINT] = 0;     /* Ctrl-r */
-//	newtio.c_cc[VDISCARD] = 0;     /* Ctrl-u */
-//	newtio.c_cc[VWERASE]  = 0;     /* Ctrl-w */
-//	newtio.c_cc[VLNEXT]   = 0;     /* Ctrl-v */
-//	newtio.c_cc[VEOL2]    = 0;     /* '\0' */
-#endif
-	tcflush(tncfd, TCIOFLUSH);
-	DBG("set new serial config");
-	if(tcsetattr(tncfd,TCSANOW,&newtio) < 0){
-		ERROR("*** tcsetattr() failed: %s.",strerror(errno));
+	if(set_interface_attribs(tncfd,B9600) < 0){
 		close(tncfd);
 		tncfd = -1;
 		return -1;
 	}
+
+//	DBG("read old serial config");
+//	bool hardflow = false;
+//	tcgetattr(tncfd,&oldtio); /* save current port settings */
+//	bzero(&newtio, sizeof(newtio));
+//	memcpy(&newtio,&oldtio,sizeof(newtio));
+//#if 1 //Non Canonical Input Processing
+//	newtio.c_iflag &= ~(IMAXBEL|INPCK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IGNPAR);
+//	newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // disable software flow control
+//	newtio.c_iflag |= IGNBRK;
+//
+//	newtio.c_oflag &= ~OPOST; // unset the OPOST for raw output
+//	//newtio.c_oflag |= (OPOST|ONLCR);
+//
+//	if (hardflow) {
+//		newtio.c_cflag |= CRTSCTS;
+//	} else {
+//		newtio.c_cflag &= ~CRTSCTS;
+//	}
+//
+//	newtio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ICANON|ISIG|IEXTEN|NOFLSH|TOSTOP|PENDIN);
+//	newtio.c_cflag &= ~(CSIZE|PARENB|CSTOPB); // 8N1
+//	newtio.c_cflag |= (CS8|CREAD|CLOCAL);
+//	newtio.c_cc[VMIN] = 0;//80;
+//	newtio.c_cc[VTIME] = 3;//3;
+//
+////	newtio.c_iflag = IGNPAR;
+////	newtio.c_oflag = 0;
+////	/* set input mode (non-canonical, no echo,...) */
+////	newtio.c_lflag = 0;
+////	newtio.c_cc[VTIME]    = 3;   	/* inter-character timer unused */
+////	newtio.c_cc[VMIN]     = 80;   	/* blocking read until 5 chars received */
+//
+//	// setup the baud rate
+//	cfsetispeed(&newtio, baudrate);
+//	cfsetospeed(&newtio, baudrate);
+//
+//#else //Canonical Input Processing
+//	/* set new port settings for canonical input processing */
+//	newtio.c_cflag = baudrate | CRTSCTS | CS8 | CLOCAL | CREAD;
+//	newtio.c_iflag = IGNPAR | INLCR;
+//	newtio.c_oflag = 0;
+//	newtio.c_lflag = ICANON;
+//
+////	newtio.c_cc[VINTR]    = 0;     /* Ctrl-c */
+////	newtio.c_cc[VQUIT]    = 0;     /* Ctrl-\ */
+////	newtio.c_cc[VERASE]   = 0;     /* del */
+////	newtio.c_cc[VKILL]    = 0;     /* @ */
+////	newtio.c_cc[VEOF]     = 4;     /* Ctrl-d */
+//	newtio.c_cc[VTIME]    = 0;     /* inter-character timer unused */
+//	newtio.c_cc[VMIN]     = 1;     /* blocking read until 1 character arrives */
+////	newtio.c_cc[VSTART]   = 0;     /* Ctrl-q */
+////	newtio.c_cc[VSTOP]    = 0;     /* Ctrl-s */
+////	newtio.c_cc[VSUSP]    = 0;     /* Ctrl-z */
+////	newtio.c_cc[VEOL]     = 0;     /* '\0' */
+////	newtio.c_cc[VREPRINT] = 0;     /* Ctrl-r */
+////	newtio.c_cc[VDISCARD] = 0;     /* Ctrl-u */
+////	newtio.c_cc[VWERASE]  = 0;     /* Ctrl-w */
+////	newtio.c_cc[VLNEXT]   = 0;     /* Ctrl-v */
+////	newtio.c_cc[VEOL2]    = 0;     /* '\0' */
+//#endif
+//	tcflush(tncfd, TCIOFLUSH);
+//	DBG("set new serial config");
+//	if(tcsetattr(tncfd,TCSANOW,&newtio) < 0){
+//		ERROR("*** tcsetattr() failed: %s.",strerror(errno));
+//		close(tncfd);
+//		tncfd = -1;
+//		return -1;
+//	}
 
 	state = state_open;
 	init_error_retry_count = 0;
@@ -286,7 +328,7 @@ static int tnc_send_init_cmds(){
 }
 
 static bool tnc_can_write(){
-#if 0
+#if 1
 	fd_set wset;
 	struct timeval timeo;
 	int rc;
