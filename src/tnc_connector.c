@@ -82,12 +82,14 @@ static int tnc_open(){
 
 	last_reopen = time(NULL);
 	//open the tnc serial port - See http://tldp.org/HOWTO/Serial-Programming-HOWTO/x115.html#AEN144
-	tncfd = open(devName, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY |O_EXCL);
+	tncfd = open(devName, O_RDWR | O_NOCTTY |/*O_NONBLOCK |*/ O_NDELAY);
 	if(tncfd < 0){
 		ERROR("*** open() tnc port \"%s\" failed: %s.", devName, strerror(errno));
 		return -1;
 	}
 	fcntl(tncfd,F_SETOWN,getpid());
+	//fcntl(tncfd, F_SETFL, 0); // clear all flags
+	//fcntl(tncfd, F_SETFL, FNDELAY); // set read nonblocking
 
 	DBG("read old serial config");
 	bool hardflow = false;
@@ -95,19 +97,24 @@ static int tnc_open(){
 	bzero(&newtio, sizeof(newtio));
 	memcpy(&newtio,&oldtio,sizeof(newtio));
 #if 1 //Non Canonical Input Processing
-	newtio.c_iflag &= ~(IMAXBEL|IXOFF|INPCK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON|IGNPAR);
+	newtio.c_iflag &= ~(IMAXBEL|INPCK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IGNPAR);
+	newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // disable software flow control
 	newtio.c_iflag |= IGNBRK;
-	newtio.c_oflag &= ~OPOST;
+
+	newtio.c_oflag &= ~OPOST; // unset the OPOST for raw output
+	//newtio.c_oflag |= (OPOST|ONLCR);
+
 	if (hardflow) {
-		newtio.c_oflag |= CRTSCTS;
+		newtio.c_cflag |= CRTSCTS;
 	} else {
-		newtio.c_oflag &= ~CRTSCTS;
+		newtio.c_cflag &= ~CRTSCTS;
 	}
+
 	newtio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ICANON|ISIG|IEXTEN|NOFLSH|TOSTOP|PENDIN);
-	newtio.c_cflag &= ~(CSIZE|PARENB);
-	newtio.c_cflag |= CS8|CREAD|CLOCAL;
-	newtio.c_cc[VMIN] = 80;
-	newtio.c_cc[VTIME] = 3;
+	newtio.c_cflag &= ~(CSIZE|PARENB|CSTOPB); // 8N1
+	newtio.c_cflag |= (CS8|CREAD|CLOCAL);
+	newtio.c_cc[VMIN] = 0;//80;
+	newtio.c_cc[VTIME] = 3;//3;
 
 //	newtio.c_iflag = IGNPAR;
 //	newtio.c_oflag = 0;
@@ -249,6 +256,7 @@ static int tnc_send(const char* cmd,size_t len){
 		}
 		bytesSent = 0;
 	}
+
 	if(bytesSent < len){
 		for(int i = bytesSent;i<len;i++){
 			if(!fifo_isfull(&fifoWriteBuffer)){
@@ -272,7 +280,8 @@ static int tnc_send_init_cmds(){
 	//TODO - send initialize command according to the model
 	//AT+INFO, AT+CALL, AT+TEXT...
 	//tnc_send("AT+KISS=1\n",10);
-	tnc_send("?\n",2);
+	char *cmd = "?\n";
+	tnc_send(cmd,strlen(cmd));
 	return 0;
 }
 
@@ -297,6 +306,7 @@ static bool tnc_can_write(){
 static int tnc_send_flush(int fd){
 	int bytes_send = 0;
 	char _buf[128];
+	bzero(_buf,128);
 	int _buflen = 0;
 	// pop the cached data
 	while(!fifo_isempty(&fifoWriteBuffer) && _buflen < 128){
@@ -317,6 +327,9 @@ static int tnc_send_flush(int fd){
 		*/
 	}
 	if(_buflen > 0){
+		//DBG("flushing %s",_buf);
+		DBG("flushing data: ");
+		dump(_buf,_buflen);
 		bytes_send = write(tncfd,_buf,_buflen);
 		if(bytes_send <0){
 			if(errno == EAGAIN || errno == EINVAL){

@@ -14,6 +14,10 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
+#ifdef __APPLE__
+#include <sys/filio.h>
+#endif
 
 #define bool char
 #define true 1
@@ -57,7 +61,11 @@ static inline void dump(void *d, size_t len){
 
 int do_daemonize(void);
 
-
+static inline size_t bytes_available(int fd){
+	int bytes_avail = 0;
+	return ioctl(fd, FIONREAD, &bytes_avail);
+	return bytes_avail;
+}
 double get_time_milli_seconds();
 
 //////////////////////////////////////////////////////////////////
