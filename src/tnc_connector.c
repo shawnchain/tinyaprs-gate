@@ -76,8 +76,7 @@ static void tnc_poll_callback(int fd, poll_state state){
 	}
 }
 
-int set_interface_attribs(int fd, int speed)
-{
+int tnc_setup_port(int fd, int speed){
     struct termios tty;
 
     if (tcgetattr(fd, &tty) < 0) {
@@ -127,7 +126,7 @@ static int tnc_open(){
 	//fcntl(tncfd, F_SETFL, 0); // clear all flags
 	//fcntl(tncfd, F_SETFL, FNDELAY); // set read nonblocking
 
-	if(set_interface_attribs(tncfd,B9600) < 0){
+	if(tnc_setup_port(tncfd,baudrate/*B9600*/) < 0){
 		close(tncfd);
 		tncfd = -1;
 		return -1;
