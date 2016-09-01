@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 #endif
-#if 0
+#ifdef __linux__
 	const char* devName = "/dev/ttyUSB0";
 	const char* model = "tinyaprs";
 #else
