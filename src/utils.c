@@ -19,11 +19,12 @@
 #include <time.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <sys/time.h>
 
 
 #include "utils.h"
 
-void _log(const char* tag, const char* msg, ...) {
+void _log(const char* tag, const char* module, const char* msg, ...) {
 	char string[512];
 	va_list args;
 	va_start(args,msg);
@@ -37,9 +38,11 @@ void _log(const char* tag, const char* msg, ...) {
 	strftime(stime, 32, "%Y-%m-%d %H:%M:%S", time_info);
 
 	if(strncmp("ERROR",tag,5) == 0){
-		fprintf(stderr,"%s [%s] - %s\n", stime, tag, string);
+		fprintf(stderr,"%s [%s] (%s) - %s\n", stime, tag, module, string);
+		//fflush(stderr);
 	}else{
-		printf("%s [%s] - %s\n", stime, tag, string);
+		printf("%s [%s] (%s) - %s\n", stime, tag, module, string);
+		//fflush(stdout);
 	}
 }
 
@@ -118,6 +121,13 @@ int do_daemonize(void)
 	return 0;
 }
 
+double get_time_milli_seconds(){
+	struct timeval  tv;
+	gettimeofday(&tv, NULL);
+	double time_in_mill =
+	         (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
+	return time_in_mill;
+}
 //////////////////////////////////////////////////////////////////
 // Simple poll wrapper
 
@@ -164,7 +174,7 @@ int poll_remove(int fd){
 					}
 				}
 			}
-			DBG("Remove fd %d from poll list, maxfd is %d\n",fd,maxfd);
+			DBG("Remove fd %d from poll list, maxfd is %d",fd,maxfd);
 			return i;
 		}
  	}
@@ -192,11 +202,12 @@ int poll_run(){
 	timeo.tv_sec = 0;
 	timeo.tv_usec = 500000; // 500ms
 
-	rc = select(maxfd + 1, &rset, NULL, &eset, &timeo);
+	rc = select(maxfd + 1, &rset, &wset, &eset, &timeo);
 	if (rc < 0) {
 		fprintf(stderr, "*** select(): %s.\n", strerror(errno));
 		return -1;
 	}else if(rc >0){
+		// got ready
 		for(int i = 0;i<pollfds_len;i++){
 			if(pollfds[i] >=0){
 				 if(FD_ISSET(pollfds[i], &rset) && pollcbs[i] > 0){
@@ -211,6 +222,7 @@ int poll_run(){
 			}
 		}
 	}else{
+		// idle
 		for(int i = 0;i<pollfds_len;i++){
 			if(pollfds[i] >=0){
 				 if(pollcbs[i] > 0){
@@ -218,8 +230,8 @@ int poll_run(){
 				 }
 			}
 		}
+		usleep(10000);
 	}
-
 	return 0;
 }
 

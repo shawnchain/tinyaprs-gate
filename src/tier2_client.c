@@ -94,7 +94,7 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 	return 0;
 }
 
-#define RECONNECT_TIMEOUT 10
+#define RECONNECT_WAITTIME 10
 #define KEEPALIVE_TIMEOUT 20
 #define IDLE_TIMEOUT 90
 
@@ -102,7 +102,7 @@ int tier2_client_run(){
 	time_t t = time(NULL);
 	if(state == state_disconnected){
 		// try to reconnect
-		if(t - last_reconnect > RECONNECT_TIMEOUT){
+		if(t - last_reconnect > RECONNECT_WAITTIME){
 			INFO("reconnecting...");
 			tier2_client_connect();
 		}
@@ -173,7 +173,7 @@ static int tier2_client_disconnect(){
 }
 
 //const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/36.045101/103.836093/1500\r\n";
-const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/30.2731/120.1543/150\r\n";
+const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/30.2731/120.1543/15\r\n";
 const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
 static int tier2_client_receive(int _sockfd) {

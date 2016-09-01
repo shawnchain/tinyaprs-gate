@@ -73,18 +73,21 @@ int main(int argc, char* argv[]){
 	*/
 
 	poll_init();
-
-	int rc = tier2_client_init(config.host,config.port,"foo","bar","");
+	int rc;
+#if T2_CLIENT_MODULE
+	rc = tier2_client_init(config.host,config.port,"foo","bar","");
 	if(rc < 0){
 		// igate init error
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
+#endif
 #if 0
 	const char* devName = "/dev/ttyUSB0";
 	const char* model = "tinyaprs";
 #else
-	const char* devName = "/dev/tty.usbserial";
+	//const char* devName = "/dev/tty.usbserial";
+	const char* devName = "/dev/tty.SLAB_USBtoUART";
 	const char* model = "tinyaprs";
 #endif
 	rc = tnc_init(devName,9600,model,0);
@@ -96,7 +99,7 @@ int main(int argc, char* argv[]){
 	beacon_init();
 
 	while(true){
-		tier2_client_run();
+		//tier2_client_run();
 		tnc_run();
 		beacon_run();
 		poll_run();

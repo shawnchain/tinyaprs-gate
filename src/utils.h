@@ -47,18 +47,28 @@ static inline void hexdump(void *d, size_t len) {
 	printf("\n");
 }
 
+static inline void dump(void *d, size_t len){
+	unsigned char *s;
+	printf("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n");
+	for (s = d; len; len--, s++)
+		printf("%c", *s);
+	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+}
+
 int do_daemonize(void);
 
+
+double get_time_milli_seconds();
 
 //////////////////////////////////////////////////////////////////
 // Simple logger
 
-#define DBG(msg, ...)  _log("DEBUG",msg, ##__VA_ARGS__)
-#define INFO(msg, ...) _log("INFO ",msg, ##__VA_ARGS__)
-#define WARN(msg, ...) _log("WARN ",msg, ##__VA_ARGS__)
-#define ERROR(msg, ...) _log("ERROR",msg, ##__VA_ARGS__)
+#define DBG(msg, ...)  _log("DEBUG",__FILE__,msg, ##__VA_ARGS__)
+#define INFO(msg, ...) _log("INFO ",__FILE__,msg, ##__VA_ARGS__)
+#define WARN(msg, ...) _log("WARN ",__FILE__,msg, ##__VA_ARGS__)
+#define ERROR(msg, ...) _log("ERROR",__FILE__,msg, ##__VA_ARGS__)
 
-void _log(const char* tag, const char* message, ...);
+void _log(const char* tag, const char* module, const char* message, ...);
 
 
 //////////////////////////////////////////////////////////////////
