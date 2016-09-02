@@ -199,9 +199,9 @@ static int tnc_received(char* data, size_t len){
 
 		if(tnc_parse_device_info(data, len) > 0){
 			state = state_ready;
-			INFO("tnc initialized OK");
+			INFO("tnc initialized.");
 		}else{
-			INFO("Unknow tnc response");
+			INFO("Unknow tnc response.");
 		}
 
 		break;
@@ -402,7 +402,7 @@ int tnc_run(){
 	case state_init_request:
 		// check timeout
 		if(t - last_init_req > tnc_config.init_wait_time){
-			INFO("!!! tnc initializing failed, wait for response timeout");
+			INFO("*** tnc initialize failed, wait for response timeout");
 			if(++init_error_count >= MAX_INIT_ERROR_COUNT){
 				tnc_close();
 				last_reopen = time(NULL); // force to wait REOPEN_WAITTIME seconds to reopen

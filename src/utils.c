@@ -240,8 +240,9 @@ int poll_run(){
 				 }
 			}
 		}
-		usleep(10000);
 	}
+
+	usleep(50000); // force sleep 50ms as write selet is always returns true.
 	return 0;
 }
 

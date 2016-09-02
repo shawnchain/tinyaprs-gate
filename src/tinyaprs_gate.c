@@ -74,6 +74,7 @@ int main(int argc, char* argv[]){
 
 	poll_init();
 	int rc;
+#define T2_CLIENT_MODULE 1
 #if T2_CLIENT_MODULE
 	rc = tier2_client_init(config.host,config.port,"foo","bar","");
 	if(rc < 0){
@@ -99,7 +100,7 @@ int main(int argc, char* argv[]){
 	beacon_init();
 
 	while(true){
-		//tier2_client_run();
+		tier2_client_run();
 		tnc_run();
 		beacon_run();
 		poll_run();
