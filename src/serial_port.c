@@ -24,7 +24,7 @@ static int serial_port_setup(int fd, int speed){
     struct termios tty;
 
     if (tcgetattr(fd, &tty) < 0) {
-        printf("Error get serial port config tcgetattr(): %s\n", strerror(errno));
+        ERROR("get serial port config failed, tcgetattr(): %s", strerror(errno));
         return -1;
     }
 
@@ -48,7 +48,7 @@ static int serial_port_setup(int fd, int speed){
     tty.c_cc[VTIME] = 1;
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        printf("Error set serial port config tcsetattr(): %s\n", strerror(errno));
+        ERROR("set serial port config failed, tcsetattr(): %s", strerror(errno));
         return -1;
     }
     return 0;
