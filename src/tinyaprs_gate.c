@@ -41,6 +41,14 @@ static void print_help(int argc, char *argv[]){
 
 }
 
+/**
+ * Callback method for tnc data received
+ */
+static void tnc_packet_decoded(char* packet,size_t len){
+	//DBG("TNC Received %d bytes",len);
+	stringdump(packet,len);
+}
+
 int main(int argc, char* argv[]){
 	int opt;
 	while ((opt = getopt_long(argc, argv, "dh",
@@ -91,7 +99,7 @@ int main(int argc, char* argv[]){
 	const char* devName = "/dev/tty.SLAB_USBtoUART";
 	const char* model = "tinyaprs";
 #endif
-	rc = tnc_init(devName,9600,model,0);
+	rc = tnc_init(devName,9600,model,NULL,tnc_packet_decoded);
 	if(rc < 0){
 		ERROR("*** error initialize the TNC module, aborted.");
 		exit(1);

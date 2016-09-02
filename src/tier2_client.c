@@ -20,10 +20,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#include "tier2_client.h"
-
 #include "tinyaprs_gate.h"
 #include "utils.h"
+#include "slre.h"
+
+#include "tier2_client.h"
 
 #define buffer_len 4 * 1024
 
@@ -31,7 +32,8 @@ typedef enum{
 	state_disconnected = 0,
 	state_connected,
 	state_server_prompt,
-	state_server_logged_in
+	state_server_unverified,
+	state_server_verified,
 }tier2_client_state;
 
 static tier2_client_state state = 0;
@@ -42,7 +44,6 @@ static struct sockaddr_inx server_addr;
 static int tier2_client_connect();
 static int tier2_client_disconnect();
 static int tier2_client_receive(int fd);
-static int tier2_client_send(const char* data,size_t len);
 static void tier2_client_keepalive();
 
 static void tier2_client_poll_callback(int fd, poll_state state){
@@ -95,7 +96,7 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 }
 
 #define RECONNECT_WAITTIME 10
-#define KEEPALIVE_TIMEOUT 20
+#define KEEPALIVE_TIMEOUT 30
 #define IDLE_TIMEOUT 90
 
 int tier2_client_run(){
@@ -113,7 +114,7 @@ int tier2_client_run(){
 			tier2_client_disconnect();
 			tier2_client_connect();
 		}
-		if(state == state_server_logged_in){
+		if(state == state_server_verified || state == state_server_unverified){
 			if(t - last_keepalive > KEEPALIVE_TIMEOUT){
 				tier2_client_keepalive();
 			}
@@ -172,8 +173,24 @@ static int tier2_client_disconnect(){
 	return 0;
 }
 
+/**
+ * logresp BG5HHP verified, server T2XWT
+ */
+static bool tier2_client_verifylogin(const char* resp, size_t len){
+	struct slre_cap caps[2];
+	char * regexp = "^# logresp ([a-zA-Z0-9//-]+) verified, server ([a-zA-Z0-9]+)";
+	if(slre_match(regexp,resp,len,caps,2,0) > 0){
+		DBG("%.*s verified, server: %.*s",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr);
+		//DBG("-> %.*s, %.*s,",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr);
+		return true;
+	}else{
+		//DBG("-> %s",buf);
+	}
+	return false;
+}
+
 //const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/36.045101/103.836093/1500\r\n";
-const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/30.2731/120.1543/15\r\n";
+const char* LOGIN_CMD = "user BG5HHP pass -1 vers TinyAprsGate 0.1 filter r/30.2731/120.1543/15\r\n";
 const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
 static int tier2_client_receive(int _sockfd) {
@@ -197,9 +214,14 @@ static int tier2_client_receive(int _sockfd) {
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
-		state = state_server_logged_in;
+		if(tier2_client_verifylogin(read_buffer,rc)){
+			state = state_server_verified;
+		}else{
+			WARN("User verification failed");
+			state = state_server_unverified;
+		}
 		break;
-	case state_server_logged_in:
+	case state_server_verified:
 		// should send update to server!
 		break;
 	default:
@@ -209,7 +231,7 @@ static int tier2_client_receive(int _sockfd) {
 	return 0;
 }
 
-static int tier2_client_send(const char* data,size_t len){
+int tier2_client_send(const char* data,size_t len){
 	int rc;
 	if(sockfd < 0){
 		return -1;
@@ -219,7 +241,15 @@ static int tier2_client_send(const char* data,size_t len){
 		// something wrong
 		ERROR("*** send(): %s.", strerror(errno));
 	}
-	return 0;
+	return rc;
+}
+
+int tier2_client_publish(const char* packet, size_t len){
+	if(state != state_server_verified){
+		INFO("user unverified, publish aborted");
+		return -1;
+	}
+	return tier2_client_send(packet,len);
 }
 
 // keep alive

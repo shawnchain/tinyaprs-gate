@@ -40,6 +40,8 @@ static int tncfd;
 static tnc_state state;
 static bool receiving = false;
 
+static tnc_packet_callback packetcb;
+
 static time_t last_reopen = 0, last_init_req = 0, last_keepalive = 0,last_read_ms = 0;
 
 #define MAX_WRITE_BUFFER_LEN 512
@@ -208,8 +210,11 @@ static int tnc_received(char* data, size_t len){
 	case state_ready:
 		//TODO - parse the tnc received frame
 		DBG("%d bytes received",len);
-		stringdump(data,len);
-		//hexdump(data,len);
+		//TODO - decode data
+		//if(decode(data,len)...
+		if(packetcb){
+			packetcb(data,len);
+		}
 		break;
 	//case state_reading:
 		// accumulate the received bytes until read timeout
@@ -364,7 +369,7 @@ static int tnc_parse_device_info(char* data, size_t len){
 	return -1;
 }
 
-int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds){
+int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds , tnc_packet_callback _packetcb){
 	bzero(&tnc,sizeof(tnc));
 
 	// copy the parameters
@@ -374,9 +379,12 @@ int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _in
 	for(int i = 0;i<MAX_INIT_CMDS && _initCmds != 0 && *(_initCmds + i) != 0;i++){
 		strncpy(initCmds[i],*(_initCmds + i),MAX_INIT_CMD_LEN);
 	}
+	packetcb = _packetcb;
+
 	// initialize the write buffer
 	fifo_init(&fifoWriteBuffer,write_buffer,MAX_WRITE_BUFFER_LEN);
 
+	// Open the device
 	tnc_open();
 	return 0; // always returns success
 }
