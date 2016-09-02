@@ -121,10 +121,10 @@ int do_daemonize(void)
 	return 0;
 }
 
-double get_time_milli_seconds(){
+time_t get_time_milli_seconds(){
 	struct timeval  tv;
 	gettimeofday(&tv, NULL);
-	double time_in_mill =
+	time_t time_in_mill =
 	         (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
 	return time_in_mill;
 }

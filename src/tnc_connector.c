@@ -17,23 +17,28 @@
 #include "fifobuf.h"
 #include "serial_port.h"
 
+#include "tnc_connector.h"
+
+TNC tnc; // shared device instance
+
+static TNCConfig tnc_config = {
+	.reopen_wait_time = 15,
+	.init_wait_time = 15,
+	.read_wait_time_ms = 350
+};
+
 typedef enum{
 	state_close = 0,
 	state_open,
 	state_init_request,
 	state_ready
-	//state_reading
 }tnc_state;
 
 static int tncfd;
 static tnc_state state;
 static bool receiving = false;
 
-#define REOPEN_WAIT_TIME 15
-#define INIT_RESPONSE_WAIT_TIME 15
-#define READ_WAIT_TIME_MS 350.f
-static time_t last_reopen = 0,last_init_req = 0;
-static double last_read = 0.f;
+static time_t last_reopen = 0, last_init_req = 0, last_keepalive = 0,last_read_ms = 0;
 
 #define MAX_WRITE_BUFFER_LEN 512
 static unsigned char write_buffer[MAX_WRITE_BUFFER_LEN];
@@ -41,12 +46,12 @@ static FIFOBuffer fifoWriteBuffer;
 
 #define MAX_INIT_CMDS 8
 #define MAX_INIT_CMD_LEN 128
-static char devName[64], model[64];
-static long baudrate;
 static char initCmds[MAX_INIT_CMDS][MAX_INIT_CMD_LEN];
 
-static int init_error_retry_count = 0;
-static int MAX_INIT_RETRY_COUNT = 3;
+#define MAX_INIT_ERROR_COUNT 3
+static int init_error_count = 0;
+#define MAX_READ_WRITE_ERROR_COUNT 10
+static int read_write_error_count = 0;
 
 static int tnc_open();
 static int tnc_close();
@@ -56,6 +61,7 @@ static int tnc_send(const char* data,size_t len);
 static int tnc_send_init_cmds();
 static int tnc_send_flush(int fd);
 static bool tnc_can_write();
+static void tnc_parse_device_info(char* data, size_t len);
 
 static void tnc_poll_callback(int fd, poll_state state){
 	switch(state){
@@ -87,14 +93,17 @@ static int tnc_open(){
 	last_reopen = time(NULL);
 
 	//open the tnc serial port - See http://tldp.org/HOWTO/Serial-Programming-HOWTO/x115.html#AEN144
-	tncfd = serial_port_open(devName, baudrate);
+	tncfd = serial_port_open(tnc.devname, tnc.baudrate);
 	if(tncfd < 0){
 		return -1;
 	}
 
 	state = state_open;
-	init_error_retry_count = 0;
-	INFO("tnc open \"%s\" success",devName);
+	init_error_count = 0;
+	read_write_error_count = 0;
+	last_keepalive = 0;
+	receiving = false;
+	INFO("tnc open \"%s\" success",tnc.devname);
 
 	// initialize
 	INFO("tnc initializing...");
@@ -154,6 +163,9 @@ static int tnc_receiving(int fd){
 	bytesRead = read(fd,read_buffer + read_buffer_len,bytes_available);
 	if(bytesRead <= 0){
 		ERROR("*** tnc_receiving() error: %s",strerror(errno));
+		if(++read_write_error_count >= MAX_READ_WRITE_ERROR_COUNT){
+			tnc_close();
+		}
 		return -1;
 	}
 	read_buffer_len += bytesRead;
@@ -162,7 +174,7 @@ static int tnc_receiving(int fd){
 		DBG("Receiving data");
 	}
 
-	last_read = get_time_milli_seconds(); // wait for the read timeout to flush the buffer
+	last_read_ms = get_time_milli_seconds(); // wait for the read timeout to flush the buffer
 	if(read_buffer_len == MAX_READ_BUFFER_LEN){
 		tnc_received(read_buffer,MAX_READ_BUFFER_LEN);
 		read_buffer_len = 0;// reset the buffer
@@ -185,10 +197,10 @@ static int tnc_received(char* data, size_t len){
 		break;
 	case state_ready:
 		//TODO - parse the tnc received frame
-		//state = state_server_logged_in;
 		DBG("%d bytes received",len);
 		stringdump(data,len);
 		//hexdump(data,len);
+		tnc_parse_device_info(data, len);
 		break;
 	//case state_reading:
 		// accumulate the received bytes until read timeout
@@ -309,11 +321,17 @@ static int tnc_send_flush(int fd){
 	return 0;
 }
 
-int tnc_init(const char* _devName, int _baudrate, const char* _model, char** _initCmds){
+static void tnc_parse_device_info(char* data, size_t len){
+
+}
+
+int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds){
+	bzero(&tnc,sizeof(tnc));
+
 	// copy the parameters
-	strncpy(devName,_devName,63);
-	strncpy(model,_model,63);
-	baudrate = _baudrate;
+	strncpy(tnc.devname,_devname,31);
+	strncpy(tnc.model,_model,15);
+	tnc.baudrate = _baudrate;
 	for(int i = 0;i<MAX_INIT_CMDS && _initCmds != 0 && *(_initCmds + i) != 0;i++){
 		strncpy(initCmds[i],*(_initCmds + i),MAX_INIT_CMD_LEN);
 	}
@@ -324,33 +342,37 @@ int tnc_init(const char* _devName, int _baudrate, const char* _model, char** _in
 	return 0; // always returns success
 }
 
-time_t last_keepalive = 0;
 int tnc_run(){
 	time_t t = time(NULL);
-	if(state == state_close){
+
+	switch(state){
+	case state_close:
 		// try to reconnect
-		if(t - last_reopen > REOPEN_WAIT_TIME){
+		if(t - last_reopen > tnc_config.reopen_wait_time){
 			DBG("reopening tnc port...");
 			tnc_open();
 		}
-	}else if(state == state_open){
+		break;
+	case state_open:
 		// try to send the init string
 		INFO("tnc initializing...");
 		last_init_req = time(NULL);
 		tnc_send_init_cmds();
 		state = state_init_request;
-	}else if(state == state_init_request){
+		break;
+	case state_init_request:
 		// check timeout
-		if(t - last_init_req > INIT_RESPONSE_WAIT_TIME){
+		if(t - last_init_req > tnc_config.init_wait_time){
 			INFO("!!! tnc initializing failed, wait for response timeout");
-			if(++init_error_retry_count >= MAX_INIT_RETRY_COUNT){
+			if(++init_error_count >= MAX_INIT_ERROR_COUNT){
 				tnc_close();
 				last_reopen = time(NULL); // force to wait REOPEN_WAITTIME seconds to reopen
 			}else{
 				state = state_open;
 			}
 		}
-	}else if(state == state_ready){
+		break;
+	case state_ready:
 		if(last_keepalive == 0){
 			last_keepalive = t;
 		}
@@ -359,13 +381,15 @@ int tnc_run(){
 			tnc_send("AT+CALL=\n",9);
 			last_keepalive = t;
 		}
-
+		break;
+	default:
+		break;
 	}
 
 	if(receiving && read_buffer_len > 0){
 		// timeout check
-		double c = get_time_milli_seconds();
-		if(c - last_read > READ_WAIT_TIME_MS /*ms*/){
+		time_t c = get_time_milli_seconds();
+		if(c - last_read_ms > tnc_config.read_wait_time_ms){
 			// read timeout
 			receiving = false;
 			tnc_received(read_buffer,read_buffer_len);

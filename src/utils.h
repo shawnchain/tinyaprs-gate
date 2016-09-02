@@ -61,7 +61,8 @@ static inline size_t bytes_available(int fd){
 	return ioctl(fd, FIONREAD, &bytes_avail);
 	return bytes_avail;
 }
-double get_time_milli_seconds();
+
+time_t get_time_milli_seconds();
 
 //////////////////////////////////////////////////////////////////
 // Simple logger
