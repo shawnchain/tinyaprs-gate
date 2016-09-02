@@ -105,7 +105,7 @@ static int tnc_open(){
 	read_write_error_count = 0;
 	last_keepalive = 0;
 	receiving = false;
-	INFO("tnc open \"%s\" success",tnc.devname);
+	INFO("open \"%s\" success",tnc.devname);
 
 	// initialize
 	INFO("tnc initializing...");
@@ -149,7 +149,7 @@ static int tnc_close(){
 		tncfd = -1;
 	}
 	state = state_close;
-	INFO("tnc_close() ok");
+	INFO("tnc closed.");
 	return 0;
 }
 
@@ -191,16 +191,17 @@ static int tnc_received(char* data, size_t len){
 	switch(state){
 	case state_init_request:
 		// check the init request response
-
+#ifdef DEBUG
+		stringdump(data,len);
+#endif
 		//tier2_client_send(LOGIN_CMD,strlen(LOGIN_CMD)); // send login command
 		DBG("%d bytes received",len);
 
-		if(tnc_parse_device_info(data, len)){
+		if(tnc_parse_device_info(data, len) > 0){
 			state = state_ready;
 			INFO("tnc initialized OK");
 		}else{
 			INFO("Unknow tnc response");
-			stringdump(data,len);
 		}
 
 		break;
@@ -335,8 +336,6 @@ static int tnc_send_flush(int fd){
  */
 static int tnc_parse_device_info(char* data, size_t len){
 	struct slre_cap caps[3];
-	//([a-zA-Z\\.0-9\\-]+) \\(([a-zA-Z\\.\\-0-9]+)\\)
-	//char * regexp = "^TinyAPRS\\s+\\(([a-zA-Z0-9//\\//-]+)\\)\\s+([a-zA-Z0-9\\-\\.]+)\\s+\\(([a-zA-Z0-9\\-]+)\\)";
 	char * regexp = "^TinyAPRS\\s+\\(([a-zA-Z0-9//\\//-]+)\\)\\s+([0-9]+.[0-9]+-[a-zA-Z]+)\\s+\\(([a-zA-Z0-9\\-]+)\\)$";
 	char *start=data,*end = data;
 	for(int i = 0;i<len;i++){
@@ -349,7 +348,6 @@ static int tnc_parse_device_info(char* data, size_t len){
 				bzero(buf,128);
 				memcpy(buf,start,(end-start));
 				if(slre_match(regexp,buf,strlen(buf),caps,3,0) > 0){
-					//DBG("-> MATCH %s",buf);
 					DBG("Found TinyAPRS %.*s, ver: %.*s, rev: %.*s",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr,caps[2].len,caps[2].ptr);
 					memcpy(tnc.model,caps[0].ptr,caps[0].len);
 					memcpy(tnc.firmware_rev,caps[1].ptr,caps[1].len);
