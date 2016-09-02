@@ -176,7 +176,8 @@ int poll_remove(int fd){
 			pollfds[i] = -1;
 			pollcbs[i] = 0;
 			if(maxfd == fd){
-				// should update the maxfd
+				maxfd = 0;
+				// get the maxfd
 				for(int j = 0;j<pollfds_len;j++){
 					if(pollfds[j] > maxfd){
 						maxfd = pollfds[j];

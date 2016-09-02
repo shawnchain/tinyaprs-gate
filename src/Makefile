@@ -9,10 +9,10 @@ PREFIX := $(shell [ -d /opt/local ] && echo /opt/local || echo /usr )
 endif
 
 CC ?= gcc
-CFLAGS += -Wall -ggdb
-HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h serial_port.h
+CFLAGS += -Wall -ggdb -DDEBUG
+HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h serial_port.h slre.h
 
-tinyaprsgate: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o serial_port.o
+tinyaprsgate: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o serial_port.o slre.o
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
 %.o: %.c $(HEADERS)

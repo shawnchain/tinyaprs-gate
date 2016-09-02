@@ -16,6 +16,7 @@
 #include "utils.h"
 #include "fifobuf.h"
 #include "serial_port.h"
+#include "slre.h"
 
 #include "tnc_connector.h"
 
@@ -24,7 +25,8 @@ TNC tnc; // shared device instance
 static TNCConfig tnc_config = {
 	.reopen_wait_time = 15,
 	.init_wait_time = 15,
-	.read_wait_time_ms = 350
+	.read_wait_time_ms = 350,
+	.keepalive_wait_time = -1,
 };
 
 typedef enum{
@@ -61,7 +63,7 @@ static int tnc_send(const char* data,size_t len);
 static int tnc_send_init_cmds();
 static int tnc_send_flush(int fd);
 static bool tnc_can_write();
-static void tnc_parse_device_info(char* data, size_t len);
+static int tnc_parse_device_info(char* data, size_t len);
 
 static void tnc_poll_callback(int fd, poll_state state){
 	switch(state){
@@ -162,7 +164,7 @@ static int tnc_receiving(int fd){
 
 	bytesRead = read(fd,read_buffer + read_buffer_len,bytes_available);
 	if(bytesRead <= 0){
-		ERROR("*** tnc_receiving() error: %s",strerror(errno));
+		ERROR("*** tnc_receiving %d, read() error: %s",bytesRead, strerror(errno));
 		if(++read_write_error_count >= MAX_READ_WRITE_ERROR_COUNT){
 			tnc_close();
 		}
@@ -189,18 +191,24 @@ static int tnc_received(char* data, size_t len){
 	switch(state){
 	case state_init_request:
 		// check the init request response
-		state = state_ready;
+
 		//tier2_client_send(LOGIN_CMD,strlen(LOGIN_CMD)); // send login command
 		DBG("%d bytes received",len);
-		stringdump(data,len);
-		INFO("tnc initialized OK");
+
+		if(tnc_parse_device_info(data, len)){
+			state = state_ready;
+			INFO("tnc initialized OK");
+		}else{
+			INFO("Unknow tnc response");
+			stringdump(data,len);
+		}
+
 		break;
 	case state_ready:
 		//TODO - parse the tnc received frame
 		DBG("%d bytes received",len);
 		stringdump(data,len);
 		//hexdump(data,len);
-		tnc_parse_device_info(data, len);
 		break;
 	//case state_reading:
 		// accumulate the received bytes until read timeout
@@ -321,8 +329,41 @@ static int tnc_send_flush(int fd){
 	return 0;
 }
 
-static void tnc_parse_device_info(char* data, size_t len){
-
+/*
+ * parse "TinyAPRS (KISS-TNC/GPS-Beacon) 1.1-SNAPSHOT (f1a0-3733)"
+ * into tnc device info
+ */
+static int tnc_parse_device_info(char* data, size_t len){
+	struct slre_cap caps[3];
+	//([a-zA-Z\\.0-9\\-]+) \\(([a-zA-Z\\.\\-0-9]+)\\)
+	//char * regexp = "^TinyAPRS\\s+\\(([a-zA-Z0-9//\\//-]+)\\)\\s+([a-zA-Z0-9\\-\\.]+)\\s+\\(([a-zA-Z0-9\\-]+)\\)";
+	char * regexp = "^TinyAPRS\\s+\\(([a-zA-Z0-9//\\//-]+)\\)\\s+([0-9]+.[0-9]+-[a-zA-Z]+)\\s+\\(([a-zA-Z0-9\\-]+)\\)$";
+	char *start=data,*end = data;
+	for(int i = 0;i<len;i++){
+		if((data[i] == '\r' || data[i] == '\n') && (i > 0)){
+			end = data + i;
+			if(end - start > 20){
+				//DBG("possible string %d bytes ",(end - start));
+				// use regexp
+				char buf[128];
+				bzero(buf,128);
+				memcpy(buf,start,(end-start));
+				if(slre_match(regexp,buf,strlen(buf),caps,3,0) > 0){
+					//DBG("-> MATCH %s",buf);
+					DBG("Found TinyAPRS %.*s, ver: %.*s, rev: %.*s",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr,caps[2].len,caps[2].ptr);
+					memcpy(tnc.model,caps[0].ptr,caps[0].len);
+					memcpy(tnc.firmware_rev,caps[1].ptr,caps[1].len);
+					memcpy(tnc.board_rev,caps[2].ptr,caps[2].len);
+					//DBG("-> %.*s, %.*s,",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr);
+					return 1;
+				}else{
+					//DBG("-> %s",buf);
+				}
+			}
+			start = end + 1;
+		}
+	}
+	return -1;
 }
 
 int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds){
@@ -373,13 +414,16 @@ int tnc_run(){
 		}
 		break;
 	case state_ready:
-		if(last_keepalive == 0){
-			last_keepalive = t;
-		}
-		if(t - last_keepalive > 5){
-			// perform keep_alive ping
-			tnc_send("AT+CALL=\n",9);
-			last_keepalive = t;
+		if(tnc_config.keepalive_wait_time > 0){
+			// perform the keepalive
+			if(last_keepalive == 0){
+				last_keepalive = t;
+			}
+			if(t - last_keepalive > tnc_config.keepalive_wait_time){
+				// perform keep_alive ping
+				tnc_send("AT+CALL=\n",9);
+				last_keepalive = t;
+			}
 		}
 		break;
 	default:

@@ -11,15 +11,16 @@
 typedef struct{
 	char devname[32];
 	int  baudrate;
-	char model[16];
-	char firmware_rev[16];
-	char board_rev[16];
+	char model[32];
+	char firmware_rev[32];
+	char board_rev[32];
 }TNC;
 
 typedef struct{
 	int reopen_wait_time;
 	int init_wait_time;
 	int read_wait_time_ms;
+	int keepalive_wait_time;
 }TNCConfig;
 
 extern TNC tnc;

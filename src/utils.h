@@ -66,8 +66,11 @@ time_t get_time_milli_seconds();
 
 //////////////////////////////////////////////////////////////////
 // Simple logger
-
+#ifdef DEBUG
 #define DBG(msg, ...)  _log("DEBUG",__FILE__,msg, ##__VA_ARGS__)
+#else
+#define DBG(msg, ...)
+#endif
 #define INFO(msg, ...) _log("INFO ",__FILE__,msg, ##__VA_ARGS__)
 #define WARN(msg, ...) _log("WARN ",__FILE__,msg, ##__VA_ARGS__)
 #define ERROR(msg, ...) _log("ERROR",__FILE__,msg, ##__VA_ARGS__)
