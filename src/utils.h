@@ -51,13 +51,8 @@ static inline void hexdump(void *d, size_t len) {
 	printf("\n");
 }
 
-static inline void dump(void *d, size_t len){
-	unsigned char *s;
-	printf("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n");
-	for (s = d; len; len--, s++)
-		printf("%c", *s);
-	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
-}
+void stringdump(void *d, size_t len);
+
 
 int do_daemonize(void);
 

@@ -15,6 +15,7 @@
 #include "tier2_client.h"
 #include "utils.h"
 #include "fifobuf.h"
+#include "serial_port.h"
 
 typedef enum{
 	state_close = 0,
@@ -41,7 +42,7 @@ static FIFOBuffer fifoWriteBuffer;
 #define MAX_INIT_CMDS 8
 #define MAX_INIT_CMD_LEN 128
 static char devName[64], model[64];
-static unsigned int baudrate;
+static long baudrate;
 static char initCmds[MAX_INIT_CMDS][MAX_INIT_CMD_LEN];
 
 static int init_error_retry_count = 0;
@@ -76,135 +77,54 @@ static void tnc_poll_callback(int fd, poll_state state){
 	}
 }
 
-int tnc_setup_port(int fd, int speed){
-    struct termios tty;
 
-    if (tcgetattr(fd, &tty) < 0) {
-        ERROR("*** tcgetattr() :%s.", strerror(errno));
-        return -1;
-    }
-
-    cfsetospeed(&tty, (speed_t)speed);
-    cfsetispeed(&tty, (speed_t)speed);
-
-    tty.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;         /* 8-bit characters */
-    tty.c_cflag &= ~PARENB;     /* no parity bit */
-    tty.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
-    tty.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
-
-    /* setup for non-canonical mode */
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-    tty.c_oflag &= ~OPOST;
-
-    /* fetch bytes as they become available */
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 1;
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        ERROR("*** tcsetattr() :%s.", strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
-
-//static struct termios oldtio,newtio;
+/**
+ * Open serial ports
+ */
 static int tnc_open(){
 	if(state == state_open) return 0;
 
 	last_reopen = time(NULL);
+
 	//open the tnc serial port - See http://tldp.org/HOWTO/Serial-Programming-HOWTO/x115.html#AEN144
-	tncfd = open(devName, O_RDWR | O_NOCTTY |/*O_NONBLOCK |*/ O_NDELAY);
+	tncfd = serial_port_open(devName, baudrate);
 	if(tncfd < 0){
-		ERROR("*** open() tnc port \"%s\" failed: %s.", devName, strerror(errno));
 		return -1;
 	}
-	fcntl(tncfd,F_SETOWN,getpid());
-	//fcntl(tncfd, F_SETFL, 0); // clear all flags
-	//fcntl(tncfd, F_SETFL, FNDELAY); // set read nonblocking
-
-	if(tnc_setup_port(tncfd,baudrate/*B9600*/) < 0){
-		close(tncfd);
-		tncfd = -1;
-		return -1;
-	}
-
-//	DBG("read old serial config");
-//	bool hardflow = false;
-//	tcgetattr(tncfd,&oldtio); /* save current port settings */
-//	bzero(&newtio, sizeof(newtio));
-//	memcpy(&newtio,&oldtio,sizeof(newtio));
-//#if 1 //Non Canonical Input Processing
-//	newtio.c_iflag &= ~(IMAXBEL|INPCK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IGNPAR);
-//	newtio.c_iflag &= ~(IXON | IXOFF | IXANY); // disable software flow control
-//	newtio.c_iflag |= IGNBRK;
-//
-//	newtio.c_oflag &= ~OPOST; // unset the OPOST for raw output
-//	//newtio.c_oflag |= (OPOST|ONLCR);
-//
-//	if (hardflow) {
-//		newtio.c_cflag |= CRTSCTS;
-//	} else {
-//		newtio.c_cflag &= ~CRTSCTS;
-//	}
-//
-//	newtio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ICANON|ISIG|IEXTEN|NOFLSH|TOSTOP|PENDIN);
-//	newtio.c_cflag &= ~(CSIZE|PARENB|CSTOPB); // 8N1
-//	newtio.c_cflag |= (CS8|CREAD|CLOCAL);
-//	newtio.c_cc[VMIN] = 0;//80;
-//	newtio.c_cc[VTIME] = 3;//3;
-//
-////	newtio.c_iflag = IGNPAR;
-////	newtio.c_oflag = 0;
-////	/* set input mode (non-canonical, no echo,...) */
-////	newtio.c_lflag = 0;
-////	newtio.c_cc[VTIME]    = 3;   	/* inter-character timer unused */
-////	newtio.c_cc[VMIN]     = 80;   	/* blocking read until 5 chars received */
-//
-//	// setup the baud rate
-//	cfsetispeed(&newtio, baudrate);
-//	cfsetospeed(&newtio, baudrate);
-//
-//#else //Canonical Input Processing
-//	/* set new port settings for canonical input processing */
-//	newtio.c_cflag = baudrate | CRTSCTS | CS8 | CLOCAL | CREAD;
-//	newtio.c_iflag = IGNPAR | INLCR;
-//	newtio.c_oflag = 0;
-//	newtio.c_lflag = ICANON;
-//
-////	newtio.c_cc[VINTR]    = 0;     /* Ctrl-c */
-////	newtio.c_cc[VQUIT]    = 0;     /* Ctrl-\ */
-////	newtio.c_cc[VERASE]   = 0;     /* del */
-////	newtio.c_cc[VKILL]    = 0;     /* @ */
-////	newtio.c_cc[VEOF]     = 4;     /* Ctrl-d */
-//	newtio.c_cc[VTIME]    = 0;     /* inter-character timer unused */
-//	newtio.c_cc[VMIN]     = 1;     /* blocking read until 1 character arrives */
-////	newtio.c_cc[VSTART]   = 0;     /* Ctrl-q */
-////	newtio.c_cc[VSTOP]    = 0;     /* Ctrl-s */
-////	newtio.c_cc[VSUSP]    = 0;     /* Ctrl-z */
-////	newtio.c_cc[VEOL]     = 0;     /* '\0' */
-////	newtio.c_cc[VREPRINT] = 0;     /* Ctrl-r */
-////	newtio.c_cc[VDISCARD] = 0;     /* Ctrl-u */
-////	newtio.c_cc[VWERASE]  = 0;     /* Ctrl-w */
-////	newtio.c_cc[VLNEXT]   = 0;     /* Ctrl-v */
-////	newtio.c_cc[VEOL2]    = 0;     /* '\0' */
-//#endif
-//	tcflush(tncfd, TCIOFLUSH);
-//	DBG("set new serial config");
-//	if(tcsetattr(tncfd,TCSANOW,&newtio) < 0){
-//		ERROR("*** tcsetattr() failed: %s.",strerror(errno));
-//		close(tncfd);
-//		tncfd = -1;
-//		return -1;
-//	}
 
 	state = state_open;
 	init_error_retry_count = 0;
 	INFO("tnc open \"%s\" success",devName);
 
+	// initialize
+	INFO("tnc initializing...");
+	const char* initcmd = "?\n";
+	int initcmd_len = strlen(initcmd);
+	int wlen = write(tncfd,initcmd,initcmd_len);
+	if(wlen != 2){
+		WARN("write %d of %d bytes init command",wlen,initcmd_len);
+	}
+	tcdrain(tncfd); // wait for the serial port write complete
+	state = state_init_request;
+	last_init_req = time(NULL);
+#if 0
+    do {
+        unsigned char buf[80];
+        int rdlen;
+
+        rdlen = read(tncfd, buf, sizeof(buf) - 1);
+        if (rdlen > 0) {
+            buf[rdlen] = 0;
+            printf("Read %d: \"%s\"\n", rdlen, buf);
+        } else if (rdlen < 0) {
+            printf("Error from read: %d: %s\n", rdlen, strerror(errno));
+        }
+        /* repeat read to get full message */
+    } while (1);
+#endif
+
+	// set unblock and select
+	serial_port_set_nonblock(tncfd,1);
 	poll_add(tncfd,tnc_poll_callback);
 	return 0;
 }
@@ -260,14 +180,14 @@ static int tnc_received(char* data, size_t len){
 		state = state_ready;
 		//tier2_client_send(LOGIN_CMD,strlen(LOGIN_CMD)); // send login command
 		DBG("%d bytes received",len);
-		dump(data,len);
+		stringdump(data,len);
 		INFO("tnc initialized OK");
 		break;
 	case state_ready:
 		//TODO - parse the tnc received frame
 		//state = state_server_logged_in;
 		DBG("%d bytes received",len);
-		dump(data,len);
+		stringdump(data,len);
 		//hexdump(data,len);
 		break;
 	//case state_reading:
@@ -312,7 +232,8 @@ static int tnc_send(const char* cmd,size_t len){
 		DBG("%d of %d bytes sent",bytesSent,len);
 	}
 	if(bytesSent > 0){
-		tcflush(tncfd, TCIOFLUSH);
+		tcdrain(tncfd);
+		//tcflush(tncfd, TCIOFLUSH);
 	}
 	return 0;
 }
@@ -370,16 +291,17 @@ static int tnc_send_flush(int fd){
 	if(_buflen > 0){
 		//DBG("flushing %s",_buf);
 		DBG("flushing data: ");
-		dump(_buf,_buflen);
+		stringdump(_buf,_buflen);
 		bytes_send = write(tncfd,_buf,_buflen);
-		if(bytes_send <0){
+		if(bytes_send <=0){
 			if(errno == EAGAIN || errno == EINVAL){
 				INFO("!!! write() failed due to non-blocked fd is not ready: %s",strerror(errno));
 			}else{
 				ERROR("*** write(): %s.", strerror(errno));
 			}
 		}else{
-			tcflush(tncfd, TCIOFLUSH);
+			//tcflush(tncfd, TCIOFLUSH);
+			tcdrain(tncfd);
 			DBG("flushed write buffer %d of %d bytes.",bytes_send,_buflen);
 		}
 	}
@@ -387,7 +309,7 @@ static int tnc_send_flush(int fd){
 	return 0;
 }
 
-int tnc_init(const char* _devName, unsigned int _baudrate, const char* _model, char** _initCmds){
+int tnc_init(const char* _devName, int _baudrate, const char* _model, char** _initCmds){
 	// copy the parameters
 	strncpy(devName,_devName,63);
 	strncpy(model,_model,63);
@@ -402,6 +324,7 @@ int tnc_init(const char* _devName, unsigned int _baudrate, const char* _model, c
 	return 0; // always returns success
 }
 
+time_t last_keepalive = 0;
 int tnc_run(){
 	time_t t = time(NULL);
 	if(state == state_close){
@@ -427,6 +350,16 @@ int tnc_run(){
 				state = state_open;
 			}
 		}
+	}else if(state == state_ready){
+		if(last_keepalive == 0){
+			last_keepalive = t;
+		}
+		if(t - last_keepalive > 5){
+			// perform keep_alive ping
+			tnc_send("AT+CALL=\n",9);
+			last_keepalive = t;
+		}
+
 	}
 
 	if(receiving && read_buffer_len > 0){

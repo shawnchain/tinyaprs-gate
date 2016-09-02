@@ -128,6 +128,15 @@ double get_time_milli_seconds(){
 	         (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000 ;
 	return time_in_mill;
 }
+
+void stringdump(void *d, size_t len){
+	unsigned char *s;
+	printf("=======================================================================\n");
+	for (s = d; len; len--, s++)
+		printf("%c", *s);
+	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+}
+
 //////////////////////////////////////////////////////////////////
 // Simple poll wrapper
 

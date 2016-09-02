@@ -10,9 +10,9 @@ endif
 
 CC ?= gcc
 CFLAGS += -Wall -ggdb
-HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h
+HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h serial_port.h
 
-tinyaprsgate: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o
+tinyaprsgate: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o serial_port.o
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
 %.o: %.c $(HEADERS)
