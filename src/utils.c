@@ -39,10 +39,8 @@ void _log(const char* tag, const char* module, const char* msg, ...) {
 
 	if(strncmp("ERROR",tag,5) == 0){
 		fprintf(stderr,"%s [%s] (%s) - %s\n", stime, tag, module, string);
-		//fflush(stderr);
 	}else{
 		printf("%s [%s] (%s) - %s\n", stime, tag, module, string);
-		//fflush(stdout);
 	}
 }
 
@@ -134,7 +132,7 @@ void stringdump(void *d, size_t len){
 	printf("=======================================================================\n");
 	for (s = d; len; len--, s++)
 		printf("%c", *s);
-	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	printf("\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 }
 
 //////////////////////////////////////////////////////////////////
@@ -245,4 +243,111 @@ int poll_run(){
 	usleep(50000); // force sleep 50ms as write selet is always returns true.
 	return 0;
 }
+
+static int io_readline(struct IOReader *reader){
+	// read data into buffer and callback when CR or LF is met
+	if(reader->fd < 0) return -1;
+	bool flush = false;
+	int rc = 0;
+	char c = 0;
+	while((rc = read(reader->fd,&c,1)) >0){
+		if(c == '\r' || c == '\n'){
+			flush = true;
+		}else{
+			flush = false;
+			reader->buffer[reader->bufferLen] = c;
+			reader->bufferLen++;
+			if(reader->bufferLen == (reader->maxBufferLen - 1)){
+				DBG("read buffer full!");
+				// we're full!
+				reader->buffer[reader->bufferLen] = 0;
+				reader->bufferLen--; // not including the \0
+				flush = true;
+			}
+		}
+		if(flush && reader->bufferLen > 0 && reader->callback ){
+			reader->buffer[reader->bufferLen] = 0;
+			reader->callback(reader->buffer,reader->bufferLen);
+			reader->bufferLen = 0;
+			flush = false;
+		}
+	}
+
+	if(rc < 0){
+		if(errno == EAGAIN || errno == EWOULDBLOCK){
+			rc = 0;
+		}else{
+			ERROR("*** io_readline read() error %d: %s", rc , strerror(errno));
+		}
+	}
+
+	return rc;
+}
+
+static void io_flush(struct IOReader *reader){
+	if(reader->bufferLen > 0 && reader->callback > 0){
+		reader->buffer[reader->bufferLen] = 0;
+		reader->callback(reader->buffer, reader->bufferLen);
+		reader->bufferLen = 0;
+	}
+}
+
+static int io_readtimeout(struct IOReader *reader){
+	if(reader->fd < 0)
+		return -1;
+
+	int bytesRead = read(reader->fd, (reader->buffer + reader->bufferLen), (reader->maxBufferLen - reader->bufferLen - 1) /*buffer available*/);
+	if (bytesRead > 0) {
+		reader->bufferLen += bytesRead;
+		reader->lastRead = get_time_milli_seconds();
+
+		// flush buffer if full or wait timeout
+		if (reader->bufferLen == (reader->maxBufferLen - 1)) {
+			io_flush(reader);
+		}
+	}
+
+	if(bytesRead < 0){
+		if(errno == EAGAIN || errno == EWOULDBLOCK){
+			bytesRead = 0;
+		}else{
+			ERROR("*** io_readtimeout read() %d, error: %s", bytesRead,strerror(errno));
+		}
+	}
+	return bytesRead;
+}
+
+void io_init_linereader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,void* readercb){
+	bzero(reader,sizeof(struct IOReader));
+	reader->fd = fd;
+	reader->buffer = buffer;
+	reader->maxBufferLen = bufferLen;
+	reader->fnRead = io_readline;
+	reader->callback = readercb;
+}
+
+void io_init_timeoutreader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,int timeout, void* readercb){
+	bzero(reader,sizeof(struct IOReader));
+	reader->fd = fd;
+	reader->buffer = buffer;
+	reader->maxBufferLen = bufferLen;
+	reader->fnRead = io_readtimeout;
+	reader->callback = readercb;
+	reader->timeout = timeout;
+}
+
+void io_run(struct IOReader *reader){
+	if(reader->timeout > 0 ){
+		size_t t = get_time_milli_seconds();
+		if(t - reader->lastRead > reader->timeout){
+			io_flush(reader);
+		}
+	}
+}
+
+void io_close(struct IOReader *reader){
+	bzero(reader,sizeof(struct IOReader));
+	reader->fd = -1;
+}
+
 

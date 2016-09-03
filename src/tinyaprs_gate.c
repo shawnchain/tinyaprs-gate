@@ -46,7 +46,7 @@ static void print_help(int argc, char *argv[]){
  */
 static void tnc_packet_decoded(char* packet,size_t len){
 	//DBG("TNC Received %d bytes",len);
-	stringdump(packet,len);
+	//stringdump(packet,len);
 }
 
 int main(int argc, char* argv[]){

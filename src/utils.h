@@ -94,5 +94,28 @@ int poll_remove(int fd);
 int poll_run();
 
 
+//////////////////////////////////////////////////////////////////
+// The BufferedReader wrapper
+struct IOReader;
+
+typedef void (*io_read_callback)(char*,size_t);
+typedef int (*io_read_method)(/*reader*/struct IOReader*);
+struct IOReader{
+	int fd;
+	char* buffer;
+	size_t bufferLen;
+	io_read_method fnRead; 		// the read implementation
+	io_read_callback callback;	// the callback then something read
+
+	// internal part
+	size_t maxBufferLen;
+	time_t timeout;				// read timeout
+	time_t lastRead;
+}Reader;
+
+void io_init_linereader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,void* readercb);
+void io_init_timeoutreader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,int timeout, void* readercb);
+void io_run(struct IOReader *reader);
+void io_close(struct IOReader *reader);
 
 #endif /* SRC_UTILS_H_ */

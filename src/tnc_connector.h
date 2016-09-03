@@ -25,12 +25,12 @@ typedef struct{
 
 extern TNC tnc;
 
-typedef void (*tnc_packet_callback)(char*,size_t);
+typedef void (*tnc_decode_callback)(char*,size_t);
 
 /**
  * Initialize the TNC
  */
-int tnc_init(const char* devname, int baudrate, const char* model, char** initCmds, tnc_packet_callback datacb);
+int tnc_init(const char* devname, int baudrate, const char* model, char** initCmds, tnc_decode_callback callback);
 
 /**
  *
