@@ -25,6 +25,12 @@
 	#define BV(x)  (1<<(x))
 #endif
 
+
+//TODO - construct the ax25 message
+int ax25_make(const char* src, const char* dst, const char** rpt, const char* payload){
+	return -1;
+}
+
 /*
  * The decoded ax25 frame contains:
  * | DST_ID(7) |SRC_ID(7) | RPT_LIST(7 * 8) | CTRL(0x03) | PID(0xF0) | PAYLOAD | LEN |

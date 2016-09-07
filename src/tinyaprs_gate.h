@@ -15,8 +15,8 @@ typedef struct {
 	char host[40];
 	unsigned short port;
 	bool in_background;
-}Config;
+}AppConfig;
 
-extern Config config;
+extern AppConfig appConfig;
 
 #endif /* SRC_TINYAPRS_GATE_H_ */

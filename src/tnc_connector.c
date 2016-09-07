@@ -18,36 +18,41 @@
 #include "serial_port.h"
 #include "slre.h"
 
+#include "kiss.h"
+#include "ax25.h"
+
 #include "tnc_connector.h"
+#include "config.h"
 
 TNC tnc; // shared device instance
-
-static TNCConfig tnc_config = {
-	.reopen_wait_time = 15,
-	.init_wait_time = 3,
-	.read_wait_time_ms = 350,
-	.keepalive_wait_time = -1,
-};
 
 typedef enum{
 	state_close = 0,
 	state_open,
 	state_init_request,
-	state_ready
+	state_ready,
+	state_closing, // mark for closing
 }tnc_state;
+
+typedef enum{
+	mode_config = 0,
+	mode_kiss,
+	mode_tracker,
+	mode_repeater
+}tnc_mode;
 
 static int tncfd;
 static tnc_state state;
+static tnc_mode mode;
 
-static tnc_decode_callback decodecallback;
+static tnc_ax25_decode_callback client_message_callback;
 
 static time_t last_reopen = 0, last_init_req = 0, last_keepalive = 0;
 
-#define MIN(X,Y) (X<Y?X:Y)
 #define MAX_READ_BUFFER_LEN 2048
-static char read_buffer[MAX_READ_BUFFER_LEN];
+static uint8_t read_buffer[MAX_READ_BUFFER_LEN];
 #define MAX_WRITE_BUFFER_LEN 512
-static unsigned char write_buffer[MAX_WRITE_BUFFER_LEN];
+static uint8_t write_buffer[MAX_WRITE_BUFFER_LEN];
 static struct IOReader reader;
 static FIFOBuffer fifoWriteBuffer;
 
@@ -56,18 +61,19 @@ static FIFOBuffer fifoWriteBuffer;
 static char initCmds[MAX_INIT_CMDS][MAX_INIT_CMD_LEN];
 
 #define MAX_INIT_ERROR_COUNT 3
-static int tncErrorCount = 0;
 #define MAX_READ_WRITE_ERROR_COUNT 10
+static int tncErrorCount = 0;
 
 static int tnc_open();
 static int tnc_close();
+static void tnc_switch_mode(tnc_mode mode);
 static int tnc_receiving(int fd);
-static void tnc_received(char* data, size_t len);
+static void tnc_received(uint8_t* data, size_t len);
 static int tnc_send(const char* data,size_t len);
 static int tnc_send_init_cmds();
 static int tnc_send_flush(int fd);
 static bool tnc_can_write();
-static int tnc_parse_device_info(char* data, size_t len);
+static int tnc_parse_device_info(uint8_t* data, size_t len);
 
 static void tnc_poll_callback(int fd, poll_state state){
 	switch(state){
@@ -79,6 +85,7 @@ static void tnc_poll_callback(int fd, poll_state state){
 			tnc_send_flush(fd);
 			break;
 		case poll_state_error:
+			INFO("Polled error, closing port...");
 			tnc_close();
 			break;
 		case poll_state_idle:
@@ -125,12 +132,13 @@ static int tnc_open(){
 static int tnc_close(){
 	if(state == state_close) return 0;
 
-	if(tncfd){
+	if(tncfd > 0){ // TODO - move to reader->fnClose();
 		poll_remove(tncfd);
 		close(tncfd);
 		tncfd = -1;
+		reader.fd = -1;
 	}
-	io_close(&reader);
+	reader.fnClose(&reader);
 	state = state_close;
 	INFO("tnc port closed.");
 	return 0;
@@ -141,14 +149,17 @@ static int tnc_receiving(int fd){
 	int rc = reader.fnRead(&reader);
 	if(rc <=0){
 		if(++tncErrorCount >= MAX_READ_WRITE_ERROR_COUNT){
+			INFO("too much receiving error encountered %d, closing port...",tncErrorCount);
 			tnc_close();
 		}
 		return -1;
+	}else{
+		tncErrorCount = 0;
 	}
 	return 0;
 }
 
-static void tnc_received(char* data, size_t len){
+static void tnc_received(uint8_t* data, size_t len){
 	//receive from TNC and parse frames
 	switch(state){
 	case state_init_request:
@@ -158,6 +169,9 @@ static void tnc_received(char* data, size_t len){
 		if(tnc_parse_device_info(data, len) > 0){
 			state = state_ready;
 			INFO("tnc initialized.");
+
+			//TODO - switch to kiss mode according to the config
+			tnc_switch_mode(mode_kiss);
 		}else{
 			INFO("tnc initialize failed, got unexpected response.");
 			#ifdef DEBUG
@@ -171,14 +185,18 @@ static void tnc_received(char* data, size_t len){
 		}
 		break;
 	case state_ready:
-		//TODO - parse the tnc received frame
+		//decode to ax25 message
 		DBG("%d bytes received",len);
-		stringdump(data,len);
-		//TODO - decode data
-		//if(decode(data,len)...
-		if(decodecallback){
-			decodecallback(data,len);
+		AX25Msg msg;
+		if(ax25_decode(data,len,&msg)){
+			if(client_message_callback){
+				client_message_callback(&msg);
+			}
+		}else{
+			INFO("Unsupported frame, %d bytes",len);
+			hexdump(data,len);
 		}
+
 		break;
 	default:
 		break;
@@ -304,22 +322,62 @@ static int tnc_send_flush(int fd){
  * parse "TinyAPRS (KISS-TNC/GPS-Beacon) 1.1-SNAPSHOT (f1a0-3733)"
  * into tnc device info
  */
-static int tnc_parse_device_info(char* data, size_t len){
+static int tnc_parse_device_info(uint8_t* data, size_t len){
 	struct slre_cap caps[3];
+	int ret = -1;
 	char * regexp = "TinyAPRS\\s+\\(([a-zA-Z0-9//\\//-]+)\\)\\s+([0-9]+.[0-9]+-[a-zA-Z]+)\\s+\\(([a-zA-Z0-9\\-]+)\\)";
+	char * regexp2 ="Mode: \\s([0-9]+)";
+
+	// match device type/versions
 	if(len > 20){
-		if(slre_match(regexp,data,len,caps,3,0) > 0){
+		if(slre_match(regexp,(const char*)data,len,caps,3,0) > 0){
 			DBG("Found TinyAPRS %.*s, ver: %.*s, rev: %.*s",caps[0].len,caps[0].ptr,caps[1].len,caps[1].ptr,caps[2].len,caps[2].ptr);
 			memcpy(tnc.model,caps[0].ptr,caps[0].len);
 			memcpy(tnc.firmware_rev,caps[1].ptr,caps[1].len);
 			memcpy(tnc.board_rev,caps[2].ptr,caps[2].len);
-			return 1;
+			ret = 1; // detected
 		}
 	}
-	return -1;
+	// match device mode
+	if(slre_match(regexp2,(const char*)data,len,caps,1,0) > 0 && caps[0].len == 1){
+		switch(*(caps[0].ptr)){
+		case '0':
+			mode = mode_config;
+			break;
+		case '1':
+			mode = mode_kiss;
+			break;
+		case '2':
+			mode = mode_tracker;
+			break;
+		case '3':
+			mode = mode_repeater;
+			break;
+		default:
+			mode = mode_config;
+			break;
+		}
+	}
+	DBG("device mode: %d",mode);
+
+	// match device stat
+
+	return ret;
 }
 
-int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds , tnc_decode_callback cb){
+static void tnc_switch_mode(tnc_mode mode){
+	if(mode == mode_kiss){
+#if 1
+		kiss_init(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN, tnc_received);
+#else
+		io_init_timeoutreader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,350/*read timeout set to 350ms*/,tnc_received);
+#endif
+	}else{
+
+	}
+}
+
+int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds , tnc_ax25_decode_callback cb){
 	bzero(&tnc,sizeof(tnc));
 
 	// copy the parameters
@@ -329,7 +387,9 @@ int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _in
 	for(int i = 0;i<MAX_INIT_CMDS && _initCmds != 0 && *(_initCmds + i) != 0;i++){
 		strncpy(initCmds[i],*(_initCmds + i),MAX_INIT_CMD_LEN);
 	}
-	decodecallback = cb;
+	client_message_callback = cb;
+
+	mode = mode_config;
 
 	// initialize the write buffer
 	fifo_init(&fifoWriteBuffer,write_buffer,MAX_WRITE_BUFFER_LEN);
@@ -345,7 +405,7 @@ int tnc_run(){
 	switch(state){
 	case state_close:
 		// re-connect
-		if(t - last_reopen > tnc_config.reopen_wait_time){
+		if(t - last_reopen > config.tnc[0].reopen_wait_time){
 			DBG("reopening tnc port...");
 			tnc_open();
 		}
@@ -355,19 +415,24 @@ int tnc_run(){
 //		break;
 	case state_init_request:
 		// initialize timeout check
-		if(t - last_init_req > tnc_config.init_wait_time){
+		if(t - last_init_req > config.tnc[0].init_wait_time){
 			INFO("tnc initialize timeout");
+#if 0
 			tnc_close();
 			last_reopen = time(NULL); // force to wait REOPEN_WAITTIME seconds to reopen
+#else
+			state = state_ready;
+			tnc_switch_mode(mode_kiss);
+#endif
 		}
 		break;
 	case state_ready:
-		if(tnc_config.keepalive_wait_time > 0){
+		if(config.tnc[0].keepalive_wait_time > 0){
 			// perform the keepalive
 			if(last_keepalive == 0){
 				last_keepalive = t;
 			}
-			if(t - last_keepalive > tnc_config.keepalive_wait_time){
+			if(t - last_keepalive > config.tnc[0].keepalive_wait_time){
 				// perform keep_alive ping
 				tnc_send("AT+CALL=\n",9);
 				last_keepalive = t;
@@ -379,7 +444,8 @@ int tnc_run(){
 	}
 
 	// io reader runloop;
-	io_run(&reader);
+	if(reader.fnRun)
+		reader.fnRun(&reader);
 
 	return 0;
 }

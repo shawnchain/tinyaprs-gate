@@ -16,21 +16,15 @@ typedef struct{
 	char board_rev[32];
 }TNC;
 
-typedef struct{
-	int reopen_wait_time;
-	int init_wait_time;
-	int read_wait_time_ms;
-	int keepalive_wait_time;
-}TNCConfig;
-
 extern TNC tnc;
+struct AX25Msg;
 
-typedef void (*tnc_decode_callback)(char*,size_t);
+typedef void (*tnc_ax25_decode_callback)(struct AX25Msg*);
 
 /**
  * Initialize the TNC
  */
-int tnc_init(const char* devname, int baudrate, const char* model, char** initCmds, tnc_decode_callback callback);
+int tnc_init(const char* devname, int baudrate, const char* model, char** initCmds, tnc_ax25_decode_callback callback);
 
 /**
  *

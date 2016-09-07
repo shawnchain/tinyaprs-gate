@@ -25,6 +25,7 @@
 #include "slre.h"
 
 #include "tier2_client.h"
+#include "config.h"
 
 #define buffer_len 4 * 1024
 
@@ -190,7 +191,7 @@ static bool tier2_client_verifylogin(const char* resp, size_t len){
 }
 
 //const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/36.045101/103.836093/1500\r\n";
-const char* LOGIN_CMD = "user BG5HHP pass -1 vers TinyAprsGate 0.1 filter r/30.2731/120.1543/15\r\n";
+const char* LOGIN_CMD = "user %s pass %s vers TinyAprsGate 0.1 filter %s\r\n";
 const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
 static int tier2_client_receive(int _sockfd) {
@@ -210,7 +211,9 @@ static int tier2_client_receive(int _sockfd) {
 	switch(state){
 	case state_connected:
 		state = state_server_prompt;
-		tier2_client_send(LOGIN_CMD,strlen(LOGIN_CMD)); // send login command
+		char loginCmd[512];
+		int i = snprintf(loginCmd,511,LOGIN_CMD,config.mycall,config.pass,config.filter);
+		tier2_client_send(loginCmd,i); // send login command
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond

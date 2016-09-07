@@ -17,8 +17,10 @@
 #include "tier2_client.h"
 #include "tnc_connector.h"
 #include "beacon.h"
+#include "ax25.h"
+#include "config.h"
 
-Config config = {
+AppConfig appConfig = {
 		.host = "t2xwt.aprs2.net",
 		//.host = "127.0.0.1",
 		.port = 14580,
@@ -41,12 +43,44 @@ static void print_help(int argc, char *argv[]){
 
 }
 
+////////////////////////////////////////////////////////
+//
+// iGate Rules:
+// SEE - http://ham.zmailer.org/oh2mqk/aprx/PROTOCOLS
+//
+static char APRS_RX_NO_RELAY_SRC[8][16] = {
+		"NOCALL",
+		"N0CALL",
+		"WIDE",
+		"TRACE",
+		"TCP",
+		""
+};
+
+static char APRS_RX_NO_RELAY_VIA[8][16] = {
+		"RFONLY",
+		"NOGATE",
+		"TCPIP",
+		"TCPXX",
+		""
+};
+
+static char APRS_RX_NO_RELAY_PAYLOAD_PREFIX[8][16] = {
+		"?",
+		"}",
+		""
+};
+
 /**
  * Callback method for tnc data received
  */
-static void tnc_packet_decoded(char* packet,size_t len){
+static void tnc_ax25_message_received(struct AX25Msg* msg){
 	//DBG("TNC Received %d bytes",len);
-	//stringdump(packet,len);
+	char buf[2048];
+	ax25_print(buf,2047,msg);
+	printf("---------------------------------------------------------------\n");
+	printf("%s",buf);
+	printf("---------------------------------------------------------------\n");
 }
 
 int main(int argc, char* argv[]){
@@ -55,7 +89,7 @@ int main(int argc, char* argv[]){
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'd':
-			config.in_background = true;
+			appConfig.in_background = true;
 			break;
 		case 'h':
 			print_help(argc,argv);
@@ -66,12 +100,12 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	if (config.in_background){
+	if (appConfig.in_background){
 		do_daemonize();
 	}
 
 	/*
-	if (config.pid_file) {
+	if (appConfig.pid_file) {
 		FILE *fp;
 		if ((fp = fopen(config.pid_file, "w"))) {
 			fprintf(fp, "%d\n", (int)getpid());
@@ -79,27 +113,18 @@ int main(int argc, char* argv[]){
 		}
 	}
 	*/
-
+	config_init(NULL);
 	poll_init();
 	int rc;
-#define T2_CLIENT_MODULE 1
-#if T2_CLIENT_MODULE
-	rc = tier2_client_init(config.host,config.port,"foo","bar","");
+
+	rc = tier2_client_init(config.server,config.port,"foo","bar","");
 	if(rc < 0){
 		// igate init error
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
-#endif
-#ifdef __linux__
-	const char* devName = "/dev/ttyUSB0";
-	const char* model = "tinyaprs";
-#else
-	//const char* devName = "/dev/tty.usbserial";
-	const char* devName = "/dev/tty.SLAB_USBtoUART";
-	const char* model = "tinyaprs";
-#endif
-	rc = tnc_init(devName,9600,model,NULL,tnc_packet_decoded);
+
+	rc = tnc_init(config.tnc[0].port,9600,config.tnc[0].model,NULL,tnc_ax25_message_received);
 	if(rc < 0){
 		ERROR("*** error initialize the TNC module, aborted.");
 		exit(1);
