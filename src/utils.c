@@ -217,25 +217,22 @@ int poll_run(){
 	}else if(rc >0){
 		// got ready
 		for(int i = 0;i<pollfds_len;i++){
-			if(pollfds[i] >=0){
-				 if(FD_ISSET(pollfds[i], &rset) && pollcbs[i] > 0){
-					 pollcbs[i](pollfds[i],poll_state_read);
-				 }
-				 if (FD_ISSET(pollfds[i], &wset) && pollcbs[i] > 0){
-					 pollcbs[i](pollfds[i],poll_state_write);
-				 }
-				 if (FD_ISSET(pollfds[i], &eset) && pollcbs[i] > 0){
-					 pollcbs[i](pollfds[i],poll_state_error);
-				 }
+			if(pollfds[i] >=0 && FD_ISSET(pollfds[i], &rset) && pollcbs[i] > 0){
+			 pollcbs[i](pollfds[i],poll_state_read);
 			}
+			if (pollfds[i] >=0 && FD_ISSET(pollfds[i], &wset) && pollcbs[i] > 0){
+			 pollcbs[i](pollfds[i],poll_state_write);
+			}
+			if (pollfds[i] >=0 && FD_ISSET(pollfds[i], &eset) && pollcbs[i] > 0){
+			 pollcbs[i](pollfds[i],poll_state_error);
+			}
+
 		}
 	}else{
 		// idle
 		for(int i = 0;i<pollfds_len;i++){
-			if(pollfds[i] >=0){
-				 if(pollcbs[i] > 0){
-					 pollcbs[i](pollfds[i],poll_state_idle);
-				 }
+			if(pollfds[i] >=0 && pollcbs[i] > 0){
+				 pollcbs[i](pollfds[i],poll_state_idle);
 			}
 		}
 	}
@@ -243,6 +240,12 @@ int poll_run(){
 	usleep(50000); // force sleep 50ms as write selet is always returns true.
 	return 0;
 }
+
+/////////////////////////////////////////////////////////////////////////
+// IO Kit
+
+static int io_run(struct IOReader *reader);
+static int io_close(struct IOReader *reader);
 
 static int io_readline(struct IOReader *reader){
 	// read data into buffer and callback when CR or LF is met
@@ -284,12 +287,13 @@ static int io_readline(struct IOReader *reader){
 	return rc;
 }
 
-static void io_flush(struct IOReader *reader){
+static int io_flush(struct IOReader *reader){
 	if(reader->bufferLen > 0 && reader->callback > 0){
 		reader->buffer[reader->bufferLen] = 0;
 		reader->callback(reader->buffer, reader->bufferLen);
 		reader->bufferLen = 0;
 	}
+	return 0;
 }
 
 static int io_readtimeout(struct IOReader *reader){
@@ -317,37 +321,48 @@ static int io_readtimeout(struct IOReader *reader){
 	return bytesRead;
 }
 
-void io_init_linereader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,void* readercb){
+void io_init_linereader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,void* readercb){
 	bzero(reader,sizeof(struct IOReader));
 	reader->fd = fd;
 	reader->buffer = buffer;
 	reader->maxBufferLen = bufferLen;
 	reader->fnRead = io_readline;
+	reader->fnRun = io_run;
+	reader->fnFlush = io_flush;
+	reader->fnClose = io_close;
 	reader->callback = readercb;
 }
 
-void io_init_timeoutreader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,int timeout, void* readercb){
+void io_init_timeoutreader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,int timeout, void* readercb){
 	bzero(reader,sizeof(struct IOReader));
 	reader->fd = fd;
 	reader->buffer = buffer;
 	reader->maxBufferLen = bufferLen;
 	reader->fnRead = io_readtimeout;
+	reader->fnRun = io_run;
+	reader->fnFlush = io_flush;
+	reader->fnClose = io_close;
 	reader->callback = readercb;
 	reader->timeout = timeout;
 }
 
-void io_run(struct IOReader *reader){
+static int io_run(struct IOReader *reader){
 	if(reader->timeout > 0 ){
 		size_t t = get_time_milli_seconds();
 		if(t - reader->lastRead > reader->timeout){
 			io_flush(reader);
 		}
 	}
+	return 0;
 }
 
-void io_close(struct IOReader *reader){
+static int io_close(struct IOReader *reader){
+//	if(reader->fd >=0){
+//		close(reader->fd);
+//	}
 	bzero(reader,sizeof(struct IOReader));
 	reader->fd = -1;
+	return 0;
 }
 
 

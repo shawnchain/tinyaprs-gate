@@ -18,11 +18,18 @@
 #ifdef __APPLE__
 #include <sys/filio.h>
 #endif
+#include <stdbool.h>
 
-#define bool char
-#define true 1
-#define false 0
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+/* Misc definitions */
+#ifndef NULL
+#define NULL  (void *)0
+#endif
+#ifndef EOF
+#define	EOF   (-1)
+#endif
+
 
 struct sockaddr_inx {
 	union {
@@ -97,14 +104,21 @@ int poll_run();
 //////////////////////////////////////////////////////////////////
 // The BufferedReader wrapper
 struct IOReader;
+struct IOWriter;
 
-typedef void (*io_read_callback)(char*,size_t);
-typedef int (*io_read_method)(/*reader*/struct IOReader*);
+typedef void (*io_read_callback)(uint8_t*,size_t);
+typedef void (*io_write_callback)(size_t);
+typedef int (*io_method)(struct IOReader*);
+typedef int (*io_write_method)(struct IOWriter*);
+
 struct IOReader{
 	int fd;
-	char* buffer;
+	uint8_t* buffer;
 	size_t bufferLen;
-	io_read_method fnRead; 		// the read implementation
+	io_method fnRead; 		// the read implementation
+	io_method fnRun;
+	io_method fnFlush;
+	io_method fnClose;
 	io_read_callback callback;	// the callback then something read
 
 	// internal part
@@ -113,9 +127,18 @@ struct IOReader{
 	time_t lastRead;
 }Reader;
 
-void io_init_linereader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,void* readercb);
-void io_init_timeoutreader(struct IOReader *reader, int fd, char* buffer, size_t bufferLen,int timeout, void* readercb);
-void io_run(struct IOReader *reader);
-void io_close(struct IOReader *reader);
+struct IOWriter{
+	int fd;
+	char* buffer;
+	size_t bufferLen;
+	io_write_method fnWrite; 		// the read implementation
+	io_write_callback callback;		// the callback then something read
+
+	// internal part
+	size_t maxBufferLen;
+}Writer;
+
+void io_init_linereader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,void* readercb);
+void io_init_timeoutreader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,int timeout, void* readercb);
 
 #endif /* SRC_UTILS_H_ */
