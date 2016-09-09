@@ -20,11 +20,9 @@
 #include "ax25.h"
 #include "config.h"
 
-AppConfig appConfig = {
-		.host = "t2xwt.aprs2.net",
-		//.host = "127.0.0.1",
-		.port = 14580,
-		.in_background = false
+static AppConfig appConfig = {
+		.in_background = false,
+		.pid_file = "/tmp/tinygate.pid"
 };
 
 static struct option long_opts[] = {
@@ -60,6 +58,7 @@ static char APRS_RX_NO_RELAY_SRC[8][16] = {
 static char APRS_RX_NO_RELAY_VIA[8][16] = {
 		"RFONLY",
 		"NOGATE",
+		"N0GATE",
 		"TCPIP",
 		"TCPXX",
 		""
@@ -71,16 +70,72 @@ static char APRS_RX_NO_RELAY_PAYLOAD_PREFIX[8][16] = {
 		""
 };
 
+static int gate_ax25_message(AX25Msg* msg){
+	if(msg->len == 0) return -1;
+	if(msg->rpt_cnt == 8) return -1;
+
+	// check if message could be gated
+	for(int i = 0;i < 5;i++){
+		if(strncmp(APRS_RX_NO_RELAY_SRC[i],msg->src.call,6) ==0){
+			DBG("message with src %.6s will not allowed to relay",msg->src.call);
+			return -1;
+		}
+	}
+	for(int i = 0;i < 5;i++){
+		for(int j = 0;j<msg->rpt_cnt;j++){
+			if(strncmp(APRS_RX_NO_RELAY_VIA[i],msg->rpt_lst[j].call,6) ==0){
+				DBG("message with VIA path %.6s is no allowed to relay",msg->rpt_lst[j].call);
+				return -1;
+			}
+		}
+	}
+	for(int i = 0;i<2;i++){
+		if(strstr((const char*)msg->info,APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]) == (const char*)(msg->info)){
+			DBG("message payload started with %s will not allowed to relay",APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]);
+			return -1;
+		}
+	}
+
+	// append the path with TCPIP*
+	strncpy(msg->rpt_lst[msg->rpt_cnt].call,"TCPIP*",6);
+	msg->rpt_cnt++;
+
+	// print to TNC-2 monitor format and publish
+	char txt[1024];
+	int len = ax25_print(txt,1021,msg);
+	if(tier2_client_publish(txt,len) < 0){
+		return -1;
+	}
+
+	return 0;
+}
+
 /**
  * Callback method for tnc data received
  */
-static void tnc_ax25_message_received(struct AX25Msg* msg){
-	//DBG("TNC Received %d bytes",len);
-	char buf[2048];
-	ax25_print(buf,2047,msg);
-	printf("---------------------------------------------------------------\n");
-	printf("%s",buf);
-	printf("---------------------------------------------------------------\n");
+static void tnc_ax25_message_received(AX25Msg* msg){
+	if(gate_ax25_message(msg) < 0){
+		INFO("relay message to tier2 server failed, message dump:");
+		//DBG("TNC Received %d bytes",len);
+		char buf[2048];
+		ax25_print(buf,2047,msg);
+		printf("Message Dump\n");
+		printf("---------------------------------------------------------------\n");
+		printf("%s",buf);
+		printf("---------------------------------------------------------------\n");
+	}else{
+#ifdef DEBUG
+		INFO("relay message to tier2 server success, message dump:");
+		char buf[2048];
+		ax25_print(buf,2047,msg);
+		printf("Message Dump\n");
+		printf("---------------------------------------------------------------\n");
+		printf("%s",buf);
+		printf("---------------------------------------------------------------\n");
+#else
+		INFO("relay message to tier2 server success");
+#endif
+	}
 }
 
 int main(int argc, char* argv[]){
@@ -99,39 +154,39 @@ int main(int argc, char* argv[]){
 			exit(1);
 		}
 	}
-
 	if (appConfig.in_background){
 		do_daemonize();
 	}
-
-	/*
-	if (appConfig.pid_file) {
-		FILE *fp;
-		if ((fp = fopen(config.pid_file, "w"))) {
-			fprintf(fp, "%d\n", (int)getpid());
-			fclose(fp);
-		}
+	FILE *fp;
+	if ((fp = fopen(appConfig.pid_file, "w"))) {
+		fprintf(fp, "%d\n", (int)getpid());
+		fclose(fp);
 	}
-	*/
-	config_init(NULL);
-	poll_init();
-	int rc;
 
-	rc = tier2_client_init(config.server,config.port,"foo","bar","");
-	if(rc < 0){
-		// igate init error
+
+	int rc;
+	if((rc = config_init("/etc/tinygate.cfg"))<0){
+		ERROR("*** error initialize the configuration, aborted.");
+		exit(1);
+	}
+	if((rc = poll_init()) < 0){
+		ERROR("*** error initialize the poll module, aborted.");
+		exit(1);
+	}
+	if((rc = tier2_client_init(config.server,config.port,"foo","bar","")) < 0){
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
-
-	rc = tnc_init(config.tnc[0].port,9600,config.tnc[0].model,NULL,tnc_ax25_message_received);
-	if(rc < 0){
+	if((rc = tnc_init(config.tnc[0].port,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
 		ERROR("*** error initialize the TNC module, aborted.");
 		exit(1);
 	}
+	if((rc = beacon_init()) < 0){
+		ERROR("*** error initialize the Beacon module, aborted.");
+		exit(1);
+	}
 
-	beacon_init();
-
+	// the main loop
 	while(true){
 		tier2_client_run();
 		tnc_run();

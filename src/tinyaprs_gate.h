@@ -12,11 +12,8 @@
 #include "utils.h"
 
 typedef struct {
-	char host[40];
-	unsigned short port;
 	bool in_background;
+	char pid_file[64];
 }AppConfig;
-
-extern AppConfig appConfig;
 
 #endif /* SRC_TINYAPRS_GATE_H_ */
