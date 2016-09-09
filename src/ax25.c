@@ -122,7 +122,7 @@ int ax25_print(char *buf, size_t len, const AX25Msg *msg){
 			*p++ = '*';
 	}
 	*p = 0;
-	return snprintf(buf,len,"%s>%s%s:%.*s\n\r",src,dst,path,(int)msg->len,msg->info);
+	return snprintf(buf,len,"%s>%s%s:%.*s\r\n",src,dst,path,(int)msg->len,msg->info);
 }
 
 
