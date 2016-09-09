@@ -97,7 +97,7 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 }
 
 #define RECONNECT_WAITTIME 10
-#define KEEPALIVE_TIMEOUT 30
+#define KEEPALIVE_TIMEOUT 60
 #define IDLE_TIMEOUT 90
 
 int tier2_client_run(){
@@ -247,12 +247,12 @@ int tier2_client_send(const char* data,size_t len){
 	return rc;
 }
 
-int tier2_client_publish(const char* packet, size_t len){
+int tier2_client_publish(const char* message, size_t len){
 	if(state != state_server_verified){
-		INFO("user unverified, publish aborted");
+		INFO("user unverified, publish message aborted");
 		return -1;
 	}
-	return tier2_client_send(packet,len);
+	return tier2_client_send(message,len);
 }
 
 // keep alive
