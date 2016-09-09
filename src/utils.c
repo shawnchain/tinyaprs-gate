@@ -143,11 +143,12 @@ static int pollfds[pollfds_len];
 static poll_callback pollcbs[pollfds_len];
 static int maxfd = -1;
 
-void poll_init(){
+int poll_init(){
 	for(int i = 0;i < pollfds_len;i++){
 		pollfds[i] = -1;
 		pollcbs[i] = 0;
 	}
+	return 0;
 }
 
 int poll_add(int fd, poll_callback callback){

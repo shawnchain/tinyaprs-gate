@@ -95,7 +95,7 @@ typedef enum{
 }poll_state;
 
 typedef void (*poll_callback)(int,poll_state);
-void poll_init();
+int poll_init();
 int poll_add(int fd, poll_callback callback);
 int poll_remove(int fd);
 int poll_run();
