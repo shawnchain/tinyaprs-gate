@@ -103,9 +103,11 @@ static int gate_ax25_message(AX25Msg* msg){
 		}
 	}
 
-	// append the path with TCPIP*
+	// append the path with
+#if 0
 	strncpy(msg->rpt_lst[msg->rpt_cnt].call,"TCPIP*",6);
 	msg->rpt_cnt++;
+#endif
 
 	// print to TNC-2 monitor format and publish
 	char txt[1024];
