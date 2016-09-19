@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <math.h>
+
 #include "json.h"
 
 #ifdef _MSC_VER
@@ -74,6 +76,19 @@ typedef struct
    unsigned int cur_line, cur_col;
 
 } json_state;
+
+static int ipow(int base, int exp){
+    int result = 1;
+    while (exp)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+
+    return result;
+}
 
 static void * default_alloc (size_t size, int zero, void * user_data)
 {
@@ -799,7 +814,7 @@ json_value * json_parse_ex (json_settings * settings,
                         goto e_failed;
                      }
 
-                     top->u.dbl += ((double) num_fraction) / (pow (10.0, (double) num_digits));
+                     top->u.dbl += ((double) num_fraction) / (ipow (10.0, (double) num_digits));
                   }
 
                   if (b == 'e' || b == 'E')
@@ -825,7 +840,7 @@ json_value * json_parse_ex (json_settings * settings,
                      goto e_failed;
                   }
 
-                  top->u.dbl *= pow (10.0, (double)
+                  top->u.dbl *= ipow (10.0, (double)
                       (flags & flag_num_e_negative ? - num_e : num_e));
                }
 
