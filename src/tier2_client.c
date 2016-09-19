@@ -204,9 +204,6 @@ static int tier2_client_receive(int _sockfd) {
 		// socket closed or something wrong
 		return -1;
 	}
-
-	printf("IS>%s",read_buffer);
-
 	last_recv = time(NULL);
 
 	switch(state){
@@ -218,6 +215,8 @@ static int tier2_client_receive(int _sockfd) {
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
+		INFO("Server Respond: %.*s",rc,read_buffer);
+		//printf("Server >IS: %s",read_buffer);
 		if(tier2_client_verifylogin(read_buffer,rc)){
 			state = state_server_verified;
 		}else{
@@ -227,8 +226,12 @@ static int tier2_client_receive(int _sockfd) {
 		break;
 	case state_server_verified:
 		// should send update to server!
+		if(rc > 0 && read_buffer[0] != '#'){
+			printf(">IS: %s",read_buffer);
+		}
 		break;
 	default:
+		//printf(">IS: %s",read_buffer);
 		break;
 	}
 
@@ -250,7 +253,7 @@ int tier2_client_send(const char* data,size_t len){
 
 int tier2_client_publish(const char* message, size_t len){
 	if(state != state_server_verified){
-		INFO("user unverified, publish message aborted");
+		INFO("publish message aborted due to unverified callsign %.9s",config.callsign);
 		return -1;
 	}
 	return tier2_client_send(message,len);
