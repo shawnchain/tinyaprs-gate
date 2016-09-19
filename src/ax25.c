@@ -14,7 +14,6 @@
  * Decode the CALL field, assume addr is a fix-size array
  */
 #define DECODE_CALL(buf, addr) \
-	unsigned int i; \
 	for (i = 0; i < sizeof((addr)); i++) \
 	{ \
 		char c = (*(buf)++ >> 1); \
@@ -40,6 +39,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 	bzero(msg,sizeof(AX25Msg));
 
 	uint8_t *buf = data;
+	unsigned int i;
 
 	DECODE_CALL(buf, msg->dst.call);
 	msg->dst.ssid = (*buf++ >> 1) & 0x0F;
