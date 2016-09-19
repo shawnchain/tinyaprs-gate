@@ -211,6 +211,7 @@ static int tier2_client_receive(int _sockfd) {
 		state = state_server_prompt;
 		char loginCmd[512];
 		int i = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
+		INFO("Login Request: %s",loginCmd);
 		tier2_client_send(loginCmd,i); // send login command
 		break;
 	case state_server_prompt:
@@ -261,7 +262,7 @@ int tier2_client_publish(const char* message, size_t len){
 
 // keep alive
 static void tier2_client_keepalive() {
-	INFO("Sending keep-alive command.");
+	DBG("Sending keep-alive command.");
 	tier2_client_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
 	last_keepalive = time(NULL);
 }
