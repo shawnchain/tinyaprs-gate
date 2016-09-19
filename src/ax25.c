@@ -14,7 +14,8 @@
  * Decode the CALL field, assume addr is a fix-size array
  */
 #define DECODE_CALL(buf, addr) \
-	for (unsigned i = 0; i < sizeof((addr)); i++) \
+	unsigned int i; \
+	for (i = 0; i < sizeof((addr)); i++) \
 	{ \
 		char c = (*(buf)++ >> 1); \
 		(addr)[i] = (c == ' ') ? '\x0' : c; \
@@ -113,7 +114,8 @@ int ax25_print(char *buf, size_t len, const AX25Msg *msg){
 	print_call(dst,&msg->dst);
 
 	char* p = path;
-	for (int i = 0; i < msg->rpt_cnt; i++){
+	int i = 0;
+	for (i = 0; i < msg->rpt_cnt; i++){
 		*p++ = ',';
 		p += print_call(p, &msg->rpt_lst[i]);
 		/* Print a '*' if packet has already been transmitted
