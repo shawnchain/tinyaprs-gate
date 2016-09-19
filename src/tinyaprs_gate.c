@@ -81,21 +81,22 @@ static int gate_ax25_message(AX25Msg* msg){
 	if(msg->rpt_cnt == 8) return -1;
 
 	// check if message could be gated
-	for(int i = 0;i < 5;i++){
+	int i = 0,j=0;
+	for(i = 0;i < 5;i++){
 		if(strncmp(APRS_RX_NO_RELAY_SRC[i],msg->src.call,6) ==0){
 			DBG("message with src %.6s will not allowed to relay",msg->src.call);
 			return -1;
 		}
 	}
-	for(int i = 0;i < 5;i++){
-		for(int j = 0;j<msg->rpt_cnt;j++){
+	for(i = 0;i < 5;i++){
+		for(j = 0;j<msg->rpt_cnt;j++){
 			if(strncmp(APRS_RX_NO_RELAY_VIA[i],msg->rpt_lst[j].call,6) ==0){
 				DBG("message with VIA path %.6s is no allowed to relay",msg->rpt_lst[j].call);
 				return -1;
 			}
 		}
 	}
-	for(int i = 0;i<2;i++){
+	for(i = 0;i<2;i++){
 		if(strstr((const char*)msg->info,APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]) == (const char*)(msg->info)){
 			DBG("message payload started with %s will not allowed to relay",APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]);
 			return -1;

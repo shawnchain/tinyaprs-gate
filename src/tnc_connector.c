@@ -5,12 +5,19 @@
  *      Author: shawn
  */
 
+#include "tnc_connector.h"
+
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
 #include <time.h>
+
+#include <strings.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #include "tier2_client.h"
 #include "utils.h"
@@ -21,7 +28,6 @@
 #include "kiss.h"
 #include "ax25.h"
 
-#include "tnc_connector.h"
 #include "config.h"
 
 TNC tnc; // shared device instance
@@ -225,7 +231,8 @@ static int tnc_send(const char* cmd,size_t len){
 	}
 
 	if(bytesSent < len){
-		for(int i = bytesSent;i<len;i++){
+		int i = 0;
+		for(i = bytesSent;i<len;i++){
 			if(!fifo_isfull(&fifoWriteBuffer)){
 				fifo_push(&fifoWriteBuffer,cmd[i]);
 			}else{
@@ -384,7 +391,8 @@ int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _in
 	strncpy(tnc.devname,_devname,31);
 	strncpy(tnc.model,_model,15);
 	tnc.baudrate = _baudrate;
-	for(int i = 0;i<MAX_INIT_CMDS && _initCmds != 0 && *(_initCmds + i) != 0;i++){
+	int i = 0;
+	for(i = 0;i<MAX_INIT_CMDS && _initCmds != 0 && *(_initCmds + i) != 0;i++){
 		strncpy(initCmds[i],*(_initCmds + i),MAX_INIT_CMD_LEN);
 	}
 	client_message_callback = cb;

@@ -8,7 +8,6 @@
 #ifndef SRC_UTILS_H_
 #define SRC_UTILS_H_
 
-#include <stdio.h>
 #include <sys/types.h>
 #include <stddef.h>
 #include <netdb.h>
@@ -19,6 +18,7 @@
 #include <sys/filio.h>
 #endif
 #include <stdbool.h>
+#include <stdio.h>
 
 #define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
 

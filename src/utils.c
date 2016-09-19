@@ -21,6 +21,9 @@
 #include <stdarg.h>
 #include <sys/time.h>
 
+#include <strings.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #include "utils.h"
 
@@ -144,7 +147,8 @@ static poll_callback pollcbs[pollfds_len];
 static int maxfd = -1;
 
 int poll_init(){
-	for(int i = 0;i < pollfds_len;i++){
+	int i = 0;
+	for(i = 0;i < pollfds_len;i++){
 		pollfds[i] = -1;
 		pollcbs[i] = 0;
 	}
@@ -152,7 +156,8 @@ int poll_init(){
 }
 
 int poll_add(int fd, poll_callback callback){
-	for(int i = 0;i < pollfds_len;i++){
+	int i = 0;
+	for(i = 0;i < pollfds_len;i++){
 		if(pollfds[i] == fd){
 			// all ready there,
 			return i;
@@ -170,14 +175,15 @@ int poll_add(int fd, poll_callback callback){
 }
 
 int poll_remove(int fd){
-	for(int i = 0;i < pollfds_len;i++){
+	int i = 0,j=0;
+	for(i = 0;i < pollfds_len;i++){
 		if(pollfds[i] == fd){
 			pollfds[i] = -1;
 			pollcbs[i] = 0;
 			if(maxfd == fd){
 				maxfd = 0;
 				// get the maxfd
-				for(int j = 0;j<pollfds_len;j++){
+				for(j = 0;j<pollfds_len;j++){
 					if(pollfds[j] > maxfd){
 						maxfd = pollfds[j];
 					}
@@ -195,12 +201,13 @@ int poll_run(){
 	fd_set rset,wset,eset;
 	struct timeval timeo;
 	int rc;
+	int i;
 
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
 	FD_ZERO(&eset);
 
-	for(int i = 0;i < pollfds_len; i++){
+	for(i = 0;i < pollfds_len; i++){
 		if(pollfds[i] >=0){
 			FD_SET(pollfds[i], &rset);
 			FD_SET(pollfds[i], &wset);
@@ -217,7 +224,7 @@ int poll_run(){
 		return -1;
 	}else if(rc >0){
 		// got ready
-		for(int i = 0;i<pollfds_len;i++){
+		for(i = 0;i<pollfds_len;i++){
 			if(pollfds[i] >=0 && FD_ISSET(pollfds[i], &rset) && pollcbs[i] > 0){
 			 pollcbs[i](pollfds[i],poll_state_read);
 			}
@@ -231,7 +238,7 @@ int poll_run(){
 		}
 	}else{
 		// idle
-		for(int i = 0;i<pollfds_len;i++){
+		for(i = 0;i<pollfds_len;i++){
 			if(pollfds[i] >=0 && pollcbs[i] > 0){
 				 pollcbs[i](pollfds[i],poll_state_idle);
 			}
