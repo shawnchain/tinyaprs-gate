@@ -21,8 +21,8 @@ typedef struct APRSMsg{
 	char text[256];
 }APRSMsg;
 
+#define BEACON_INTERVAL 300
 // TODO - configurable beacon message
-static char* SRC = "BG5HHP-7";
 static char* DST = "APTI01";
 static APRSMsg aprs = {
 		.type = "!",
@@ -44,16 +44,16 @@ static int aprs_print(char* buf, size_t len, APRSMsg* aprs){
 }
 
 int beacon_init(){
-	last_beacon = time(NULL) - 300 + 30;
+	last_beacon = time(NULL) - BEACON_INTERVAL + 30;
 	return 0;
 }
 
 int beacon_run(){
 	time_t t = time(NULL);
-	if(t - last_beacon > (5 * 60)){
+	if(t - last_beacon > BEACON_INTERVAL){
 		// BEACONING
 		char payload[1024];
-		int i = sprintf(payload,"%s>%s,TCPIP*:",SRC,DST);
+		int i = sprintf(payload,"%s>%s,TCPIP*:",config.callsign,DST);
 		i += aprs_print(payload + i,1024 - i - 1,&aprs);
 		payload[i++] = '\r';
 		payload[i++] = '\n';

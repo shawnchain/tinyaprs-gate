@@ -14,21 +14,14 @@
 {
     server="rotate.aprs.org:14580"
     port=14580,
-    mycall="",
-    pass="",
-    beacon={
-        symbol="",
-        lat="",
-        lon="",
-        text="",
-        phg="",
-    },
+    mycall="N0CALL-0",
+    pass="-1",
     tnc=[
     	{
     		id:1
     		name:"tnc-vhf"
     		model:"tinyaprs",
-    		port:"/dev/ttyUSB0",
+    		port:"/dev/ttyS0",
     	}
     	{
     		id:2
@@ -37,8 +30,15 @@
     		port:"/dev/ttyUSB0",
     	}
 
-    ]
-
+    ],
+    beacon_text="",
+    beacon={
+        symbol="",
+        lat="",
+        lon="",
+        text="",
+        phg="",
+    },
 }
 */
 typedef struct{
@@ -53,7 +53,7 @@ typedef struct{
 	uint8_t id;
 	char name[32];
 	char model[16];
-	char port[64];
+	char device[64];
 
 	int32_t reopen_wait_time;
 	int32_t init_wait_time;
@@ -67,12 +67,11 @@ typedef struct{
 typedef struct _Config{
 	char server[32];
 	int port;
-	char mycall[10];
-	char pass[10];
+	char callsign[16];
+	char passcode[16];
 	char filter[128];
 
-	TNCConfig tnc[4]; //[SUPPORTED_TNC_NUM];
-
+	TNCConfig tnc[SUPPORTED_TNC_NUM];
 	char beacon_text[256];
 }Config;
 

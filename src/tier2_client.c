@@ -212,7 +212,7 @@ static int tier2_client_receive(int _sockfd) {
 	case state_connected:
 		state = state_server_prompt;
 		char loginCmd[512];
-		int i = snprintf(loginCmd,511,LOGIN_CMD,config.mycall,config.pass,config.filter);
+		int i = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
 		tier2_client_send(loginCmd,i); // send login command
 		break;
 	case state_server_prompt:

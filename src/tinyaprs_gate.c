@@ -22,10 +22,13 @@
 
 static AppConfig appConfig = {
 		.in_background = false,
-		.pid_file = "/tmp/tinygate.pid"
+		.pid_file = "/tmp/tinygate.pid",
 };
 
 static struct option long_opts[] = {
+	{ "callsign", required_argument, 0, 'C'},
+	{ "passcode", required_argument, 0, 'P'},
+	{ "device", required_argument, 0, 'D'},
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
 	{ 0, 0, 0, 0, },
@@ -36,6 +39,9 @@ static void print_help(int argc, char *argv[]){
 	printf("Usage:\n");
 	printf("  %s [options]\n", argv[0]);
 	printf("Options:\n");
+	printf("  -C, --callsign                      iGate callsign\n");
+	printf("  -P, --passcode                      iGate passcode\n");
+	printf("  -D, --device                        tnc[0] device path\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
 
@@ -140,9 +146,18 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "dh",
+	while ((opt = getopt_long(argc, argv, "C:P:D:dh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
+		case 'C':
+			strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
+			break;
+		case 'P':
+			strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
+			break;
+		case 'D':
+			strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
+			break;
 		case 'd':
 			appConfig.in_background = true;
 			break;
@@ -165,10 +180,11 @@ int main(int argc, char* argv[]){
 
 
 	int rc;
-	if((rc = config_init("/etc/tinygate.cfg"))<0){
+	if((rc = config_init("/etc/tinyaprs.cfg"))<0){
 		ERROR("*** error initialize the configuration, aborted.");
 		exit(1);
 	}
+
 	if((rc = poll_init()) < 0){
 		ERROR("*** error initialize the poll module, aborted.");
 		exit(1);
@@ -177,7 +193,7 @@ int main(int argc, char* argv[]){
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
-	if((rc = tnc_init(config.tnc[0].port,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
+	if((rc = tnc_init(config.tnc[0].device,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
 		ERROR("*** error initialize the TNC module, aborted.");
 		exit(1);
 	}
