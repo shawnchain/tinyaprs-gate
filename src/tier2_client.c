@@ -98,7 +98,7 @@ int tier2_client_init(const char* _host, unsigned short _port, const char* _user
 }
 
 #define RECONNECT_WAITTIME 10
-#define KEEPALIVE_TIMEOUT 60
+#define KEEPALIVE_TIMEOUT 120
 #define IDLE_TIMEOUT 90
 
 int tier2_client_run(){
@@ -205,7 +205,7 @@ static int tier2_client_receive(int _sockfd) {
 		return -1;
 	}
 
-	printf(">%s",read_buffer);
+	printf("IS>%s",read_buffer);
 
 	last_recv = time(NULL);
 

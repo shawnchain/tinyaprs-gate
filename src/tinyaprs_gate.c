@@ -126,7 +126,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 		//DBG("TNC Received %d bytes",len);
 		char buf[2048];
 		ax25_print(buf,2047,msg);
-		printf("Message Dump\n");
+		printf("RF Message Dump\n");
 		printf("---------------------------------------------------------------\n");
 		printf("%s",buf);
 		printf("---------------------------------------------------------------\n");
@@ -135,7 +135,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 		INFO("relay message to tier2 server success, message dump:");
 		char buf[2048];
 		ax25_print(buf,2047,msg);
-		printf("Message Dump\n");
+		printf("RF Message Dump\n");
 		printf("---------------------------------------------------------------\n");
 		printf("%s",buf);
 		printf("---------------------------------------------------------------\n");
