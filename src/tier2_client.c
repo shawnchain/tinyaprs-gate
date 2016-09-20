@@ -66,32 +66,25 @@ static void tier2_client_poll_callback(int fd, poll_state state){
 	}
 }
 
-static char host[50], user[10], pass[6],filter[512];
-static unsigned short port;
+static char server[64];
 
-int tier2_client_init(const char* _host, unsigned short _port, const char* _user, const char* _pass, const char* _filter){
+int tier2_client_init(const char* _host){
 	// copy the parameters
-	strncpy(host,_host,49);
-	strncpy(user,_user,9);
-	strncpy(pass,_pass,5);
-	strncpy(filter,_filter,511);
-	port = _port;
-
-	INFO("Connecting to %s:%u", host, port);
+	strncpy(server,_host,63);
 
 	int rc;
 	rc = tier2_client_connect();
 	if(rc == -EAGAIN){
 		// resolve ok but connect failed, will retry later
-		WARN("Connect to '%s' temporarily failed, will re-connect later.", host);
+		WARN("Connect to '%s' temporarily failed, will re-connect later.", server);
 	}else if(rc == -EINVAL){
-		ERROR("*** Invalid address pair '%s'.", host);
+		ERROR("*** Invalid server address: '%s'.", server);
 		return -1;
 	}else if(rc < 0){
-		ERROR("*** Unable to connect to '%s'.", host);
+		ERROR("*** Unable to connect to '%s'.", server);
 		return -1;
 	}else{
-		INFO("Connected to %s:%u", host, port);
+		INFO("Server Connected");
 	}
 
 	return 0;
@@ -135,17 +128,15 @@ static int tier2_client_connect() {
 		return 0;
 	}
 
-	if ((rc = resolve_hostname(host, &server_addr)) < 0) {
+	INFO("Connecting to %s", server);
+
+	if ((rc = resolve_host(server, &server_addr)) < 0) {
 		// resolve host error, bail out
-		WARN("resolve hostname %s failed, connect aborted.",host);
+		WARN("resolve server %s failed, connect aborted.",server);
 		return rc;
 	}
 
 	last_recv = time(NULL);
-	char s_server_addr[50];
-	inet_ntop(server_addr.sa.sa_family, addr_of_sockaddr(&server_addr),
-			s_server_addr, sizeof(s_server_addr));
-	INFO("Resolved to %s:%u", s_server_addr, ntohs(port_of_sockaddr(&server_addr)));
 
 	if ((sockfd = socket((&server_addr)->sa.sa_family, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		ERROR("*** socket() failed: %s.", strerror(errno));
@@ -208,6 +199,7 @@ static int tier2_client_receive(int _sockfd) {
 
 	switch(state){
 	case state_connected:
+		INFO("Server Greeting: %s",read_buffer);
 		state = state_server_prompt;
 		char loginCmd[512];
 		int i = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
@@ -217,7 +209,6 @@ static int tier2_client_receive(int _sockfd) {
 	case state_server_prompt:
 		//TODO - check  server login respond
 		INFO("Server Respond: %.*s",rc,read_buffer);
-		//printf("Server >IS: %s",read_buffer);
 		if(tier2_client_verifylogin(read_buffer,rc)){
 			state = state_server_verified;
 		}else{

@@ -47,57 +47,49 @@ void _log(const char* tag, const char* module, const char* msg, ...) {
 	}
 }
 
-int resolve_hostname(const char *hostname, struct sockaddr_inx *sa) {
+int resolve_host(const char *hostname_port_pair /*rotate.aprs2.net:14580*/, struct sockaddr_inx *sa) {
 	struct addrinfo hints, *result;
-	char s_port[10] = "";
-	int port = 14580, rc;
+	char host[51] = "", s_port[10] = "";
+	int port = 0, rc;
 
-	/* Only getting an INADDR_ANY address. */
-	if (hostname == NULL) {
+	if (hostname_port_pair == NULL) {
 		return -EINVAL;
 	}
 
-//	if (sscanf(pair, "[%50[^]]]:%d", host, &port) == 2) {
-//	} else if (sscanf(pair, "%50[^:]:%d", host, &port) == 2) {
-//	} else {
-//		/**
-//		 * Address with a single port number, usually for
-//		 * local IPv4 listen address.
-//		 * e.g., "10000" is considered as "0.0.0.0:10000"
-//		 */
-//		const char *sp;
-//		for (sp = pair; *sp; sp++) {
-//			if (!(*sp >= '0' && *sp <= '9'))
-//				return -EINVAL;
-//		}
-//		sscanf(pair, "%d", &port);
-//		strcpy(host, "0.0.0.0");
-//	}
+	if (sscanf(hostname_port_pair, "%50[^:]:%d", host, &port) == 0) {
+		return -EINVAL;
+	}
+	if(port == 0) port = 14580;
 	sprintf(s_port, "%d", port);
 	if (port <= 0 || port > 65535)
 		return -EINVAL;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;  /* Allow IPv4 or IPv6 */
+	hints.ai_family = AF_INET;  /* Allow IPv4 only */
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;  /* For wildcard IP address */
-	hints.ai_protocol = 0;        /* Any protocol */
+	hints.ai_protocol = 0;        /* IPPROTO_TCP */
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
-	if ((rc = getaddrinfo(hostname, s_port, &hints, &result)))
+	if ((rc = getaddrinfo(host, s_port, &hints, &result)))
 		return -EAGAIN;
 
 	/* Get the first resolution. */
 	memcpy(sa, result->ai_addr, result->ai_addrlen);
 
 	freeaddrinfo(result);
+
+	char s_server_addr[50];
+	inet_ntop(sa->sa.sa_family, addr_of_sockaddr(sa),
+			s_server_addr, sizeof(s_server_addr));
+	DBG("Resolved to %s:%u", s_server_addr, ntohs(port_of_sockaddr(sa)));
+
 	return 0;
 }
 
-int do_daemonize(void)
-{
+int do_daemonize(void){
 	pid_t pid;
 
 	if ((pid = fork()) < 0) {

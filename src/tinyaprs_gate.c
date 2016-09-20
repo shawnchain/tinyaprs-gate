@@ -22,10 +22,11 @@
 
 static AppConfig appConfig = {
 		.in_background = false,
-		.pid_file = "/tmp/tinygate.pid",
+		.pid_file = "/tmp/tinyaprs.pid",
 };
 
 static struct option long_opts[] = {
+	{ "host", required_argument, 0, 'H'},
 	{ "callsign", required_argument, 0, 'C'},
 	{ "passcode", required_argument, 0, 'P'},
 	{ "device", required_argument, 0, 'D'},
@@ -39,6 +40,7 @@ static void print_help(int argc, char *argv[]){
 	printf("Usage:\n");
 	printf("  %s [options]\n", argv[0]);
 	printf("Options:\n");
+	printf("  -H, --host                          Tier2 server host\n");
 	printf("  -C, --callsign                      iGate callsign\n");
 	printf("  -P, --passcode                      iGate passcode\n");
 	printf("  -D, --device                        tnc[0] device path\n");
@@ -149,9 +151,12 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "C:P:D:dh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:D:dh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
+		case 'H':
+			strncpy(config.server, optarg, sizeof(config.server) -1);
+			break;
 		case 'C':
 			strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
 			break;
@@ -181,7 +186,6 @@ int main(int argc, char* argv[]){
 		fclose(fp);
 	}
 
-
 	int rc;
 	if((rc = config_init("/etc/tinyaprs.cfg"))<0){
 		ERROR("*** error initialize the configuration, aborted.");
@@ -192,7 +196,7 @@ int main(int argc, char* argv[]){
 		ERROR("*** error initialize the poll module, aborted.");
 		exit(1);
 	}
-	if((rc = tier2_client_init(config.server,config.port,"foo","bar","")) < 0){
+	if((rc = tier2_client_init(config.server)) < 0){
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}

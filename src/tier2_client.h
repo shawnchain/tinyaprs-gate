@@ -10,18 +10,10 @@
 
 #include <stddef.h>
 
-//typedef struct{
-//	const char host[32];
-//	unsigned short port;
-//	const char user[9];
-//	const char pass[9];
-//	const char filter[512];
-//}tier2_client_config;
-
 /**
  * Initialize the tier2 client connector
  */
-int tier2_client_init(const char* host, unsigned short port, const char* user, const char* pass, const char* filter);
+int tier2_client_init(const char* server);
 
 /**
  * Run the tier2 client in a single process loop

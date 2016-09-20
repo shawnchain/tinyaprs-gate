@@ -43,7 +43,7 @@ struct sockaddr_inx {
 #define addr_of_sockaddr(s) ((s)->sa.sa_family == AF_INET6 ? (void *)&(s)->in6.sin6_addr : (void *)&(s)->in.sin_addr)
 #define sizeof_sockaddr(s)  ((s)->sa.sa_family == AF_INET6 ? sizeof((s)->in6) : sizeof((s)->in))
 
-int resolve_hostname(const char *pair, struct sockaddr_inx *sa);
+int resolve_host(const char *hostname_port_pair, struct sockaddr_inx *sa);
 
 static inline int set_nonblock(int sockfd) {
 	if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0) | O_NONBLOCK) == -1)

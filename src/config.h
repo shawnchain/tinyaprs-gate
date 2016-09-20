@@ -65,8 +65,7 @@ typedef struct{
 #define SUPPORTED_TNC_NUM 4
 
 typedef struct _Config{
-	char server[32];
-	int port;
+	char server[64];
 	char callsign[16];
 	char passcode[16];
 	char filter[128];

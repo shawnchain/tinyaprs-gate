@@ -16,8 +16,7 @@ static void process_json_value(json_value* value, int depth);
 static void process_json_object(json_value* value, int depth);
 
 Config config = {
-		.server = "t2xwt.aprs2.net",
-		.port = 14580,
+		.server = "t2xwt.aprs2.net:14580",
 		.callsign="N0CALL",
 		.passcode="-1",
 		.filter="r/30.2731/120.1543/15",
