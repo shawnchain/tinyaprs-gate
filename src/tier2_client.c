@@ -183,7 +183,7 @@ static bool tier2_client_verifylogin(const char* resp, size_t len){
 }
 
 //const char* LOGIN_CMD = "user TINYIS pass -1 vers TinyAprsGate 0.1 filter r/36.045101/103.836093/1500\r\n";
-const char* LOGIN_CMD = "user %s pass %s vers TinyAprsGate 0.1 filter %s\r\n";
+const char* LOGIN_CMD = "user %s pass %s vers TinyAPRS 0.1 filter %s\r\n";
 const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
 static int tier2_client_receive(int _sockfd) {

@@ -29,21 +29,25 @@ static struct option long_opts[] = {
 	{ "host", required_argument, 0, 'H'},
 	{ "callsign", required_argument, 0, 'C'},
 	{ "passcode", required_argument, 0, 'P'},
+	{ "filter", required_argument, 0, 'F'},
 	{ "device", required_argument, 0, 'D'},
+	{ "text", required_argument, 0, 'T'},
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
 	{ 0, 0, 0, 0, },
 };
 
 static void print_help(int argc, char *argv[]){
-	printf("Tiny APRS iGate Daemon.\n");
+	printf("TinyAPRS iGate Daemon.\n");
 	printf("Usage:\n");
 	printf("  %s [options]\n", argv[0]);
 	printf("Options:\n");
-	printf("  -H, --host                          Tier2 server host\n");
-	printf("  -C, --callsign                      iGate callsign\n");
-	printf("  -P, --passcode                      iGate passcode\n");
-	printf("  -D, --device                        tnc[0] device path\n");
+	printf("  -H, --host                          hostanme of the APRS-IS server\n");
+	printf("  -C, --callsign                      callsign for the APRS-IS connection\n");
+	printf("  -P, --passcode                      passcode for the APRS-IS connection\n");
+	printf("  -F, --filter                        receive filter for the APRS-IS connection\n");
+	printf("  -D, --device                        specify tnc[0] device path\n"); /*-D /dev/ttyUSB0?AT+KISS=1;*/
+	printf("  -T, --text                          set the beacon text\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
 
@@ -151,7 +155,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:D:dh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:T:dh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H':
@@ -163,8 +167,14 @@ int main(int argc, char* argv[]){
 		case 'P':
 			strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
 			break;
+		case 'F':
+			strncpy(config.filter, optarg, sizeof(config.filter) - 1);
+			break;
 		case 'D':
 			strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
+			break;
+		case 'T':
+			strncpy(config.beacon_text,optarg,sizeof(config.beacon_text) -1);
 			break;
 		case 'd':
 			appConfig.in_background = true;
