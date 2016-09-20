@@ -19,7 +19,7 @@ Config config = {
 		.server = "t2xwt.aprs2.net:14580",
 		.callsign="N0CALL",
 		.passcode="-1",
-		.filter="r/30.2731/120.1543/15",
+		.filter="r/30.2731/120.1543/50",
 		.tnc ={
 				{
 					#ifdef __linux__

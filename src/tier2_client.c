@@ -186,12 +186,29 @@ static bool tier2_client_verifylogin(const char* resp, size_t len){
 const char* LOGIN_CMD = "user %s pass %s vers TinyAPRS 0.1 filter %s\r\n";
 const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
+/*
+ * dump server message, which is CRLF ended
+ */
+static void dump_server_message(char* data,size_t len){
+	int i = 0;
+	char* start = data;
+	while(data[i] != 0 && i < len){
+		if(data[i] == '\r' || data[i] == '\n'){
+			data[i] = 0;
+			if(data + i - start >1)
+				printf(">From IS: %s\n",start);
+			start = (data + i + 1);
+		}
+		i++;
+	}
+}
+
 static int tier2_client_receive(int _sockfd) {
-	int rc;
+	int bytesRead;
 	char read_buffer[buffer_len];
 	bzero(&read_buffer,buffer_len);
-	rc = recv(_sockfd,&read_buffer, buffer_len,0);
-	if(rc <=0){
+	bytesRead = recv(_sockfd,&read_buffer, buffer_len,0);
+	if(bytesRead <=0){
 		// socket closed or something wrong
 		return -1;
 	}
@@ -208,18 +225,19 @@ static int tier2_client_receive(int _sockfd) {
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
-		INFO("Server Respond: %.*s",rc,read_buffer);
-		if(tier2_client_verifylogin(read_buffer,rc)){
+		INFO("Server Respond: %.*s",bytesRead,read_buffer);
+		if(tier2_client_verifylogin(read_buffer,bytesRead)){
 			state = state_server_verified;
 		}else{
 			WARN("User verification failed");
 			state = state_server_unverified;
 		}
 		break;
+	case state_server_unverified:
 	case state_server_verified:
 		// should send update to server!
-		if(rc > 0 && read_buffer[0] != '#'){
-			printf(">IS: %s",read_buffer);
+		if(bytesRead > 0 && read_buffer[0] != '#'){
+			dump_server_message(read_buffer,bytesRead);
 		}
 		break;
 	default:
