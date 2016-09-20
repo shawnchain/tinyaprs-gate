@@ -135,33 +135,21 @@ static int gate_ax25_message(AX25Msg* msg){
 static void tnc_ax25_message_received(AX25Msg* msg){
 	if(msg == NULL) return;
 
+	// dump message
 	char buf[2048];
+	ax25_print(buf,sizeof(buf) - 1,msg);
+	INFO("\n>RF: %s",buf);
+
 	// Monitor mode
 	if(appConfig.monitor_tnc){
-		ax25_print(buf,sizeof(buf) - 1,msg);
-		printf("%s",buf);
 		return;
 	}
 
 	if(gate_ax25_message(msg) < 0){
-		INFO("relay message to tier2 server failed, message dump:");
 		//DBG("TNC Received %d bytes",len);
-		ax25_print(buf,sizeof(buf) - 1,msg);
-		printf("RF Message Dump\n");
-		printf("---------------------------------------------------------------\n");
-		printf("%s",buf);
-		printf("---------------------------------------------------------------\n");
+		INFO("relay message to tier2 server failed");
 	}else{
-#ifdef DEBUG
-		INFO("relay message to tier2 server success, message dump:");
-		ax25_print(buf,sizeof(buf) - 1,msg);
-		printf("RF Message Dump\n");
-		printf("---------------------------------------------------------------\n");
-		printf("%s",buf);
-		printf("---------------------------------------------------------------\n");
-#else
 		INFO("relay message to tier2 server success");
-#endif
 	}
 }
 
