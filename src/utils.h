@@ -8,6 +8,8 @@
 #ifndef SRC_UTILS_H_
 #define SRC_UTILS_H_
 
+#include "log.h"
+
 #include <sys/types.h>
 #include <stddef.h>
 #include <netdb.h>
@@ -70,20 +72,6 @@ static inline size_t bytes_available(int fd){
 }
 
 time_t get_time_milli_seconds();
-
-//////////////////////////////////////////////////////////////////
-// Simple logger
-#ifdef DEBUG
-#define DBG(msg, ...)  _log("DEBUG",__FILE__,msg, ##__VA_ARGS__)
-#else
-#define DBG(msg, ...)
-#endif
-#define INFO(msg, ...) _log("INFO ",__FILE__,msg, ##__VA_ARGS__)
-#define WARN(msg, ...) _log("WARN ",__FILE__,msg, ##__VA_ARGS__)
-#define ERROR(msg, ...) _log("ERROR",__FILE__,msg, ##__VA_ARGS__)
-
-void _log(const char* tag, const char* module, const char* message, ...);
-
 
 //////////////////////////////////////////////////////////////////
 // The poll wrapper

@@ -13,6 +13,7 @@
 
 typedef struct {
 	bool in_background;
+	bool monitor_tnc;
 	char pid_file[64];
 }AppConfig;
 

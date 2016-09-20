@@ -72,6 +72,8 @@ typedef struct _Config{
 
 	TNCConfig tnc[SUPPORTED_TNC_NUM];
 	char beacon_text[256];
+
+	char logfile[128];
 }Config;
 
 extern Config config;

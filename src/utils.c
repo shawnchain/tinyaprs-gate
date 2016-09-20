@@ -27,26 +27,6 @@
 
 #include "utils.h"
 
-void _log(const char* tag, const char* module, const char* msg, ...) {
-	char string[512];
-	va_list args;
-	va_start(args,msg);
-	vsnprintf(string,511,msg,args);
-
-	char stime[32];
-	time_t current_time;
-	struct tm * time_info;
-	time(&current_time);
-	time_info = localtime(&current_time);
-	strftime(stime, 32, "%Y-%m-%d %H:%M:%S", time_info);
-
-	if(strncmp("ERROR",tag,5) == 0){
-		fprintf(stderr,"%s [%s] (%s) - %s\n", stime, tag, module, string);
-	}else{
-		printf("%s [%s] (%s) - %s\n", stime, tag, module, string);
-	}
-}
-
 int resolve_host(const char *hostname_port_pair /*rotate.aprs2.net:14580*/, struct sockaddr_inx *sa) {
 	struct addrinfo hints, *result;
 	char host[51] = "", s_port[10] = "";

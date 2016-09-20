@@ -19,10 +19,12 @@
 #include "beacon.h"
 #include "ax25.h"
 #include "config.h"
+#include "log.h"
 
 static AppConfig appConfig = {
 		.in_background = false,
 		.pid_file = "/tmp/tinyaprs.pid",
+		.monitor_tnc = false,
 };
 
 static struct option long_opts[] = {
@@ -32,6 +34,7 @@ static struct option long_opts[] = {
 	{ "filter", required_argument, 0, 'F'},
 	{ "device", required_argument, 0, 'D'},
 	{ "text", required_argument, 0, 'T'},
+	{ "monitor", no_argument, 0, 'M'},
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
 	{ 0, 0, 0, 0, },
@@ -48,6 +51,7 @@ static void print_help(int argc, char *argv[]){
 	printf("  -F, --filter                        receive filter for the APRS-IS connection\n");
 	printf("  -D, --device                        specify tnc[0] device path\n"); /*-D /dev/ttyUSB0?AT+KISS=1;*/
 	printf("  -T, --text                          set the beacon text\n");
+	printf("  -M, --monitor                       print RF packets to STDOUT with TNC2 monitor format\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
 
@@ -129,11 +133,20 @@ static int gate_ax25_message(AX25Msg* msg){
  * Callback method for tnc data received
  */
 static void tnc_ax25_message_received(AX25Msg* msg){
+	if(msg == NULL) return;
+
+	char buf[2048];
+	// Monitor mode
+	if(appConfig.monitor_tnc){
+		ax25_print(buf,sizeof(buf) - 1,msg);
+		printf("%s",buf);
+		return;
+	}
+
 	if(gate_ax25_message(msg) < 0){
 		INFO("relay message to tier2 server failed, message dump:");
 		//DBG("TNC Received %d bytes",len);
-		char buf[2048];
-		ax25_print(buf,2047,msg);
+		ax25_print(buf,sizeof(buf) - 1,msg);
 		printf("RF Message Dump\n");
 		printf("---------------------------------------------------------------\n");
 		printf("%s",buf);
@@ -141,8 +154,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 	}else{
 #ifdef DEBUG
 		INFO("relay message to tier2 server success, message dump:");
-		char buf[2048];
-		ax25_print(buf,2047,msg);
+		ax25_print(buf,sizeof(buf) - 1,msg);
 		printf("RF Message Dump\n");
 		printf("---------------------------------------------------------------\n");
 		printf("%s",buf);
@@ -155,7 +167,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:T:dh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:T:Mdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H':
@@ -176,6 +188,9 @@ int main(int argc, char* argv[]){
 		case 'T':
 			strncpy(config.beacon_text,optarg,sizeof(config.beacon_text) -1);
 			break;
+		case 'M':
+			appConfig.monitor_tnc = true;
+			break;
 		case 'd':
 			appConfig.in_background = true;
 			break;
@@ -187,9 +202,16 @@ int main(int argc, char* argv[]){
 			exit(1);
 		}
 	}
+
+	// disable background if monitor mode is on;
+	if(appConfig.monitor_tnc){
+		appConfig.in_background = false;
+	}
+
 	if (appConfig.in_background){
 		do_daemonize();
 	}
+
 	FILE *fp;
 	if ((fp = fopen(appConfig.pid_file, "w"))) {
 		fprintf(fp, "%d\n", (int)getpid());
@@ -197,33 +219,45 @@ int main(int argc, char* argv[]){
 	}
 
 	int rc;
-	if((rc = config_init("/etc/tinyaprs.cfg"))<0){
-		ERROR("*** error initialize the configuration, aborted.");
-		exit(1);
+
+	if((rc = log_init(config.logfile)) < 0){
+		printf("*** warning: log system initialize failed");
 	}
 
-	if((rc = poll_init()) < 0){
-		ERROR("*** error initialize the poll module, aborted.");
+	if((rc = config_init("/etc/tinyaprs.cfg"))<0){
+		ERROR("*** error: initialize the configuration, aborted.");
 		exit(1);
 	}
-	if((rc = tier2_client_init(config.server)) < 0){
-		ERROR("*** error initialize the APRS tier2 client, aborted.");
+	if((rc = poll_init()) < 0){
+		ERROR("*** error: initialize the poll module, aborted.");
 		exit(1);
 	}
 	if((rc = tnc_init(config.tnc[0].device,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
-		ERROR("*** error initialize the TNC module, aborted.");
+		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}
-	if((rc = beacon_init()) < 0){
-		ERROR("*** error initialize the Beacon module, aborted.");
-		exit(1);
+
+	// don't initialize tier2 connect and beacon under monitor mode
+	if(appConfig.monitor_tnc){
+		INFO("Running TNC Monitor");
+	}else{
+		if((rc = tier2_client_init(config.server)) < 0){
+			ERROR("*** error initialize the APRS tier2 client, aborted.");
+			exit(1);
+		}
+		if((rc = beacon_init()) < 0){
+			ERROR("*** error initialize the Beacon module, aborted.");
+			exit(1);
+		}
 	}
 
 	// the main loop
 	while(true){
-		tier2_client_run();
 		tnc_run();
-		beacon_run();
+		if(! appConfig.monitor_tnc){
+			tier2_client_run();
+			beacon_run();
+		}
 		poll_run();
 	}
 }
