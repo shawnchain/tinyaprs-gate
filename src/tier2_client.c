@@ -90,16 +90,18 @@ int tier2_client_init(const char* _host){
 	return 0;
 }
 
-#define RECONNECT_WAITTIME 10
+#define RECONNECT_WAITTIME 15
 #define KEEPALIVE_TIMEOUT 120
 #define IDLE_TIMEOUT 90
+static int32_t current_reconnect_waittime = RECONNECT_WAITTIME;
 
 int tier2_client_run(){
 	time_t t = time(NULL);
 	if(state == state_disconnected){
 		// try to reconnect
-		if(t - last_reconnect > RECONNECT_WAITTIME){
+		if(t - last_reconnect > current_reconnect_waittime){
 			INFO("reconnecting...");
+			current_reconnect_waittime += 15;
 			tier2_client_connect();
 		}
 	}else{
@@ -108,6 +110,12 @@ int tier2_client_run(){
 			INFO("IDLE timeout, reconnecting...");
 			tier2_client_disconnect();
 			tier2_client_connect();
+		}
+		if(state == state_connected){
+			if(current_reconnect_waittime != RECONNECT_WAITTIME){
+				DBG("Reset current_reconnect_waittime");
+				current_reconnect_waittime = RECONNECT_WAITTIME;
+			}
 		}
 		if(state == state_server_verified || state == state_server_unverified){
 			if(t - last_keepalive > KEEPALIVE_TIMEOUT){
@@ -263,7 +271,10 @@ int tier2_client_send(const char* data,size_t len){
 
 int tier2_client_publish(const char* message, size_t len){
 	if(state != state_server_verified){
-		INFO("publish message aborted due to unverified callsign %.9s",config.callsign);
+		if(state == state_server_unverified)
+			INFO("publish message aborted because callsign %.9s is NOT verified.",config.callsign);
+		else
+			INFO("publish message aborted because tier2 connector is not ready yet.");
 		return -1;
 	}
 	return tier2_client_send(message,len);

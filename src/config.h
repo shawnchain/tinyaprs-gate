@@ -56,6 +56,7 @@ typedef struct{
 	char device[64];
 
 	int32_t reopen_wait_time;
+	int32_t current_reopen_wait_time;
 	int32_t init_wait_time;
 	int32_t read_wait_time_ms;
 	int32_t keepalive_wait_time;

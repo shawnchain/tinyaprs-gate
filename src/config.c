@@ -29,6 +29,7 @@ Config config = {
 					#endif
 					.model="tinyaprs",
 					.reopen_wait_time = 15,
+					.current_reopen_wait_time = 15,
 					.init_wait_time = 3,
 					.read_wait_time_ms = 350,
 					.keepalive_wait_time = -1,

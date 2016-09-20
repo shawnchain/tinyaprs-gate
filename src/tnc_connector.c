@@ -413,8 +413,9 @@ int tnc_run(){
 	switch(state){
 	case state_close:
 		// re-connect
-		if(t - last_reopen > config.tnc[0].reopen_wait_time){
-			DBG("reopening tnc port...");
+		if(t - last_reopen > config.tnc[0].current_reopen_wait_time){
+			config.tnc[0].current_reopen_wait_time += 30; // increase the reopen wait wait time
+			DBG("reopening TNC port...");
 			tnc_open();
 		}
 		break;
@@ -435,6 +436,11 @@ int tnc_run(){
 		}
 		break;
 	case state_ready:
+		if(config.tnc[0].current_reopen_wait_time != config.tnc[0].reopen_wait_time){
+			// reset the current wait time, it may be increased during previous failures.
+			DBG("Reset current_reopen_wait_time");
+			config.tnc[0].current_reopen_wait_time = config.tnc[0].reopen_wait_time;
+		}
 		if(config.tnc[0].keepalive_wait_time > 0){
 			// perform the keepalive
 			if(last_keepalive == 0){
