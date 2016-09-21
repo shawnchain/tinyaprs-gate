@@ -24,6 +24,7 @@
 static AppConfig appConfig = {
 		.in_background = false,
 		.pid_file = "/tmp/tinyaprs.pid",
+		.log_file = "/tmp/tinyaprs.log",
 		.monitor_tnc = false,
 };
 
@@ -138,7 +139,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 	// dump message
 	char buf[2048];
 	ax25_print(buf,sizeof(buf) - 1,msg);
-	INFO("\n>RF: %s",buf);
+	INFO("\n>From RF: %s",buf);
 
 	// Monitor mode
 	if(appConfig.monitor_tnc){

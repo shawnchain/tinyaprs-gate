@@ -15,6 +15,7 @@ typedef struct {
 	bool in_background;
 	bool monitor_tnc;
 	char pid_file[64];
+	char log_file[64];
 }AppConfig;
 
 #endif /* SRC_TINYAPRS_GATE_H_ */

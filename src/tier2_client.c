@@ -197,7 +197,7 @@ const char* KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 /*
  * dump server message, which is CRLF ended
  */
-static void dump_server_message(char* data,size_t len){
+static void dump_server_messages(char* data,size_t len){
 	int i = 0;
 	char* start = data;
 	while(data[i] != 0 && i < len){
@@ -211,6 +211,26 @@ static void dump_server_message(char* data,size_t len){
 	}
 }
 
+/*
+ * remove the trailing CRLF for better log
+ */
+static char* rightTrimCRLF(char *src, size_t len){
+#if 1
+	bool found = false;
+	int i = len;
+	while(i >0 ){
+		if(src[i] == '\r' || src[i] == '\n'){
+			found = true;
+			src[i] = 0;
+		}else if(found){
+			break;
+		}
+		i--;
+	}
+#endif
+	return src;
+}
+
 static int tier2_client_receive(int _sockfd) {
 	int bytesRead;
 	char read_buffer[buffer_len];
@@ -222,18 +242,19 @@ static int tier2_client_receive(int _sockfd) {
 	}
 	last_recv = time(NULL);
 
+	// removing the trailing <CR><LF>
 	switch(state){
 	case state_connected:
-		INFO("Server Greeting: %s",read_buffer);
+		INFO("Server Greeting: %s",rightTrimCRLF(read_buffer,bytesRead));
 		state = state_server_prompt;
 		char loginCmd[512];
-		int i = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
-		INFO("Login Request: %s",loginCmd);
-		tier2_client_send(loginCmd,i); // send login command
+		int cmdLen = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
+		INFO("Login Request: %.*s",cmdLen - 2 /*not logging the trailing CRLF chars*/, loginCmd);
+		tier2_client_send(loginCmd,cmdLen); // send login command
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
-		INFO("Server Respond: %.*s",bytesRead,read_buffer);
+		INFO("Server Respond: %s",rightTrimCRLF(read_buffer,bytesRead));
 		if(tier2_client_verifylogin(read_buffer,bytesRead)){
 			state = state_server_verified;
 		}else{
@@ -245,7 +266,7 @@ static int tier2_client_receive(int _sockfd) {
 	case state_server_verified:
 		// should send update to server!
 		if(bytesRead > 0 && read_buffer[0] != '#'){
-			dump_server_message(read_buffer,bytesRead);
+			dump_server_messages(read_buffer,bytesRead);
 		}
 		break;
 	default:
