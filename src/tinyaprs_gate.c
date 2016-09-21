@@ -101,21 +101,21 @@ static int gate_ax25_message(AX25Msg* msg){
 	int i = 0,j=0;
 	for(i = 0;i < 5;i++){
 		if(strncmp(APRS_RX_NO_RELAY_SRC[i],msg->src.call,6) ==0){
-			DBG("message with src %.6s will not allowed to relay",msg->src.call);
+			DBG("message with src %.6s is not allowed to relay",msg->src.call);
 			return -1;
 		}
 	}
 	for(i = 0;i < 5;i++){
 		for(j = 0;j<msg->rpt_cnt;j++){
 			if(strncmp(APRS_RX_NO_RELAY_VIA[i],msg->rpt_lst[j].call,6) ==0){
-				DBG("message with VIA path %.6s is no allowed to relay",msg->rpt_lst[j].call);
+				DBG("message with VIA path %.6s is not allowed to relay",msg->rpt_lst[j].call);
 				return -1;
 			}
 		}
 	}
 	for(i = 0;i<2;i++){
 		if(strstr((const char*)msg->info,APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]) == (const char*)(msg->info)){
-			DBG("message payload started with %s will not allowed to relay",APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]);
+			DBG("message payload started with %s is not allowed to relay",APRS_RX_NO_RELAY_PAYLOAD_PREFIX[i]);
 			return -1;
 		}
 	}
