@@ -38,6 +38,7 @@ static struct option long_opts[] = {
 	{ "location", required_argument, 0, 'L'},
 	{ "text", required_argument, 0, 'T'},
 	{ "monitor", no_argument, 0, 'M'},
+	{ "log", required_argument, 0, 'l', },
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
 	{ 0, 0, 0, 0, },
@@ -57,6 +58,7 @@ static void print_help(int argc, char *argv[]){
 	printf("  -L, --location                      set the beacon location (see APRS latlon format)\n");
 	printf("  -T, --text                          set the beacon text\n");
 	printf("  -M, --monitor                       print RF packets to STDOUT with TNC2 monitor format\n");
+	printf("  -l, --log                           log file name\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
 
@@ -185,7 +187,7 @@ static void parse_location_arg(char* loc){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:Mdh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:Mdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H': // host
@@ -212,6 +214,9 @@ int main(int argc, char* argv[]){
 			break;
 		case 'T': // beacon text
 			strncpy(config.beacon.text,optarg,sizeof(config.beacon.text) -1);
+			break;
+		case 'l':
+			strncpy(config.logfile,optarg,sizeof(config.logfile) - 1);
 			break;
 		case 'M':
 			appConfig.monitor_tnc = true;
