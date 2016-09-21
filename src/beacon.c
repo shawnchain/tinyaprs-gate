@@ -15,9 +15,9 @@
 
 typedef struct APRSMsg{
 	char type[1];
-	char symbol[2];
-	char lat[8];
-	char lon[9];
+	char symbol[3];
+	char lat[10];
+	char lon[10];
 	char text[256];
 }APRSMsg;
 
@@ -26,11 +26,13 @@ typedef struct APRSMsg{
 static char* DST = "APTI01";
 static APRSMsg aprs = {
 		.type = "!",
+		/*
 		//.symbol="/r",
 		.symbol="R&",
 		.lat = "3012.48N",
 		.lon = "12008.48E",
 		.text = "431.040MHz iGate/TinyAPRS"
+		*/
 };
 //#define BEACON_TEXT "BG5HHP-7>APTI01,TCPIP*:!3012.48N/12008.48Er431.040MHz iGate/TinyAPRS\r\n"
 
@@ -45,6 +47,17 @@ static int aprs_print(char* buf, size_t len, APRSMsg* aprs){
 
 int beacon_init(){
 	last_beacon = time(NULL) - BEACON_INTERVAL + 30;
+
+	// copy the configurations
+	strncpy(aprs.symbol,config.beacon.symbol,sizeof(aprs.symbol) -1);
+	strncpy(aprs.lat,config.beacon.lat,sizeof(aprs.lat) -1);
+	strncpy(aprs.lon,config.beacon.lon,sizeof(aprs.lon) -1);
+	strncpy(aprs.text,config.beacon.text,sizeof(aprs.text) -1);
+
+	DBG("Beacon Init");
+	DBG("  Location: %s,%s",aprs.lat,aprs.lon);
+	DBG("  Symbol: %.2s",aprs.symbol);
+	DBG("  Text: %s",aprs.text);
 	return 0;
 }
 

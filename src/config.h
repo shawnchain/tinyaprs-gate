@@ -72,8 +72,8 @@ typedef struct _Config{
 	char filter[128];
 
 	TNCConfig tnc[SUPPORTED_TNC_NUM];
-	char beacon_text[256];
 
+	BeaconConfig beacon;
 	char logfile[128];
 }Config;
 

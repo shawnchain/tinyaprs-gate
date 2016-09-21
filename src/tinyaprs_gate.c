@@ -34,6 +34,8 @@ static struct option long_opts[] = {
 	{ "passcode", required_argument, 0, 'P'},
 	{ "filter", required_argument, 0, 'F'},
 	{ "device", required_argument, 0, 'D'},
+	{ "symbol", required_argument, 0, 'S'},
+	{ "location", required_argument, 0, 'L'},
 	{ "text", required_argument, 0, 'T'},
 	{ "monitor", no_argument, 0, 'M'},
 	{ "daemon", no_argument, 0, 'd', },
@@ -51,6 +53,8 @@ static void print_help(int argc, char *argv[]){
 	printf("  -P, --passcode                      passcode for the APRS-IS connection\n");
 	printf("  -F, --filter                        receive filter for the APRS-IS connection\n");
 	printf("  -D, --device                        specify tnc[0] device path\n"); /*-D /dev/ttyUSB0?AT+KISS=1;*/
+	printf("  -S, --symbol                        set the beacon symbol (see APRS symbol table)\n");
+	printf("  -L, --location                      set the beacon location (see APRS latlon format)\n");
 	printf("  -T, --text                          set the beacon text\n");
 	printf("  -M, --monitor                       print RF packets to STDOUT with TNC2 monitor format\n");
 	printf("  -d, --daemon                        run as daemon process\n");
@@ -154,28 +158,60 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 	}
 }
 
+/*
+ *  split the "LAT,LON"
+ */
+static void parse_location_arg(char* loc){
+	char buf[32];
+	int i = 0;
+	char *lat = buf, *lon = 0;
+	strncpy(buf,loc,sizeof(buf) - 1);
+	while(buf[i] != 0){
+		if(buf[i] == ','){
+			buf[i] = 0;
+			if(sizeof(buf) - 1 - i >= 9){ // at least 9 chars of longitude
+				lon = buf + i + 1;
+			}
+			break;
+		}
+		i++;
+	}
+
+	if(lat && lon){
+		strncpy(config.beacon.lat,lat,sizeof(config.beacon.lat)  - 1);
+		strncpy(config.beacon.lon,lon,sizeof(config.beacon.lon)  - 1);
+	}
+}
+
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:T:Mdh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:Mdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
-		case 'H':
+		case 'H': // host
 			strncpy(config.server, optarg, sizeof(config.server) -1);
 			break;
-		case 'C':
+		case 'C': // callsign
 			strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
 			break;
-		case 'P':
+		case 'P': // passcode
 			strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
 			break;
-		case 'F':
+		case 'F': // filter
 			strncpy(config.filter, optarg, sizeof(config.filter) - 1);
 			break;
-		case 'D':
+		case 'D': // tnc device
 			strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
 			break;
-		case 'T':
-			strncpy(config.beacon_text,optarg,sizeof(config.beacon_text) -1);
+		case 'S': // beacon symbol
+			strncpy(config.beacon.symbol,optarg,sizeof(config.beacon.symbol) -1);
+			break;
+		case 'L':
+			// location (XX,YY)
+			parse_location_arg(optarg);
+			break;
+		case 'T': // beacon text
+			strncpy(config.beacon.text,optarg,sizeof(config.beacon.text) -1);
 			break;
 		case 'M':
 			appConfig.monitor_tnc = true;

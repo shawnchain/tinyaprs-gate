@@ -48,7 +48,12 @@ Config config = {
 				},
 			}
 		,
-		.beacon_text="!3012.48N/12008.48Er431.040MHz iGate/TinyAPRS",
+		.beacon = {
+			.symbol="R&",
+			.lat = "3012.48N",
+			.lon = "12008.48E",
+			.text = "431.040MHz iGate/TinyAPRS"
+		},
 		.logfile="/tmp/tinyaprs.log",
 };
 
