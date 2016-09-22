@@ -114,9 +114,10 @@ static config_key config_get_key_index(char* key){
 }
 
 
+#define OVERWRITE_KEY_TOTAL 64
 static Config overwriteConfig;
-static int overwriteConfigKeys[64];
-static int overwriteConfigKeyCount = -1;
+static uint8_t overwriteConfigKeys[OVERWRITE_KEY_TOTAL];
+static int8_t overwriteConfigKeyCount = -1; // max 127 keys
 
 static bool config_is_overwritten(char* key){
 	config_key keyIndex = config_get_key_index(key);
@@ -462,7 +463,7 @@ int config_overwrite_kv(char* key, char* value){
 	if(overwriteConfigKeyCount < 0){
 		// perform init;
 		memset(&overwriteConfig,0,sizeof(Config));
-		for(i = 0;i<sizeof(overwriteConfigKeys);i++){
+		for(i = 0;i<OVERWRITE_KEY_TOTAL;i++){
 			overwriteConfigKeys[i] = 0;
 		}
 		overwriteConfigKeyCount = 0;
