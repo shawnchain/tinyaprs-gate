@@ -129,4 +129,7 @@ struct IOWriter{
 void io_init_linereader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,void* readercb);
 void io_init_timeoutreader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,int timeout, void* readercb);
 
+//static void aprs_calc_phgr(uint16_t txPower,uint16_t antGain,uint16_t txIerval,uint16_t hightAGL,uint16_t antDir,char* comments, char* out, size_t len);
+void aprs_calc_location(char* latlon,char* out,size_t len);
+
 #endif /* SRC_UTILS_H_ */

@@ -54,7 +54,7 @@ typedef struct{
 	char name[32];
 	char model[16];
 	char device[64];
-
+	char init_cmd[64];
 	int32_t reopen_wait_time;
 	int32_t current_reopen_wait_time;
 	int32_t init_wait_time;
@@ -81,5 +81,9 @@ extern Config config;
 
 int config_init(const char* f);
 
+/*
+ * Set config key/value, returns the indics of the corresponding key or not_found
+ */
+int config_overwrite_kv(char* key, char* value);
 
 #endif /* SRC_CONFIG_H_ */

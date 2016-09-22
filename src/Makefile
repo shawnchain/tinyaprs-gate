@@ -15,13 +15,17 @@ HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h serial
 tinyaprs: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o serial_port.o slre.o kiss.o ax25.o json.o config.o log.o
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
+aprs_util: 
+	$(CC) $(LDFLAGS) -DAPRS_UTIL_STANDALONE -o $@ utils.c log.c
+
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: tinyaprs
+all: tinyaprs aprs_util
 
 install: tinyaprs 
 	cp -f tinyaprs $(PREFIX)/sbin/
+	cp -f aprs_util $(PREFIX)/sbin/
 
 clean:
-	rm -f tinyaprs *.o
+	rm -f tinyaprs aprs_util *.o

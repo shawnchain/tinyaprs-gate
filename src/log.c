@@ -28,8 +28,10 @@ static int log_open(bool overwrite){
 	else
 		logfile = fopen(logfileName,"a");
 	if(!logfile){
-		printf("ERROR - open log file failed, %s\n",logfileName);
+		log_log("ERROR",__FILE__,"open log file failed, %s",logfileName);
 		return -1;
+	}else{
+		log_log("INFO ",__FILE__,"open log file success, %s",logfileName);
 	}
 
 	// get log file size if appending

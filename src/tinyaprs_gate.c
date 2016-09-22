@@ -27,22 +27,23 @@ static int tnc_monitor_main();
 static AppConfig appConfig = {
 		.in_background = false,
 		.pid_file = "/tmp/tinyaprs.pid",
-		.log_file = "/tmp/tinyaprs.log",
+		.config_file = "/etc/tinyaprs.conf",
 		.monitor_tnc = false,
 		.server_monitor = false,
 };
 
 static struct option long_opts[] = {
-	{ "host", required_argument, 0, 'H'},
-	{ "callsign", required_argument, 0, 'C'},
-	{ "passcode", required_argument, 0, 'P'},
-	{ "filter", required_argument, 0, 'F'},
-	{ "device", required_argument, 0, 'D'},
-	{ "symbol", required_argument, 0, 'S'},
-	{ "location", required_argument, 0, 'L'},
-	{ "text", required_argument, 0, 'T'},
-	{ "monitor", no_argument, 0, 'M'},
-	{ "iserver", no_argument, 0, 'I'},
+	{ "host", required_argument, 0, 'H', },
+	{ "callsign", required_argument, 0, 'C', },
+	{ "passcode", required_argument, 0, 'P', },
+	{ "filter", required_argument, 0, 'F', },
+	{ "device", required_argument, 0, 'D', },
+	{ "symbol", required_argument, 0, 'S', },
+	{ "location", required_argument, 0, 'L', },
+	{ "text", required_argument, 0, 'T', },
+	{ "monitor", no_argument, 0, 'M', },
+	{ "iserver", no_argument, 0, 'I', },
+	{ "config", required_argument, 0, 'c', },
 	{ "log", required_argument, 0, 'l', },
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
@@ -64,6 +65,7 @@ static void print_help(int argc, char *argv[]){
 	printf("  -T, --text                          set the beacon text\n");
 	printf("  -M, --monitor                       print received RF packets to STDOUT (TNC2 monitor format)\n");
 	printf("  -I, --iserver                       print received IS packets to STDOUT (TNC2 monitor format)\n");
+	printf("  -c, --config                        specify config file location\n");
 	printf("  -l, --log                           log file name\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
@@ -166,6 +168,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 	}
 }
 
+
 /*
  *  split the "LAT,LON"
  */
@@ -186,43 +189,56 @@ static void parse_location_arg(char* loc){
 	}
 
 	if(lat && lon){
-		strncpy(config.beacon.lat,lat,sizeof(config.beacon.lat)  - 1);
-		strncpy(config.beacon.lon,lon,sizeof(config.beacon.lon)  - 1);
+		//strncpy(config.beacon.lat,lat,sizeof(config.beacon.lat)  - 1);
+		//strncpy(config.beacon.lon,lon,sizeof(config.beacon.lon)  - 1);
+		config_overwrite_kv("beacon.lat",optarg);
+		config_overwrite_kv("beacon.lon",optarg);
 	}
 }
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:MIdh",
+
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:c:MIdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H': // host
-			strncpy(config.server, optarg, sizeof(config.server) -1);
+			//strncpy(config.server, optarg, sizeof(config.server) -1);
+			config_overwrite_kv("server",optarg);
 			break;
 		case 'C': // callsign
-			strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
+			//strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
+			config_overwrite_kv("callsign",optarg);
 			break;
 		case 'P': // passcode
-			strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
+			//strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
+			config_overwrite_kv("passcode",optarg);
 			break;
 		case 'F': // filter
-			strncpy(config.filter, optarg, sizeof(config.filter) - 1);
+			//strncpy(config.filter, optarg, sizeof(config.filter) - 1);
+			config_overwrite_kv("filter",optarg);
 			break;
 		case 'D': // tnc device
-			strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
+			//strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
+			config_overwrite_kv("tnc0.device",optarg);
 			break;
 		case 'S': // beacon symbol
-			strncpy(config.beacon.symbol,optarg,sizeof(config.beacon.symbol) -1);
+			//strncpy(config.beacon.symbol,optarg,sizeof(config.beacon.symbol) -1);
+			config_overwrite_kv("beacon.symbol",optarg);
 			break;
-		case 'L':
-			// location (XX,YY)
+		case 'L': // location (XX,YY)
 			parse_location_arg(optarg);
 			break;
 		case 'T': // beacon text
-			strncpy(config.beacon.text,optarg,sizeof(config.beacon.text) -1);
+			//strncpy(config.beacon.text,optarg,sizeof(config.beacon.text) -1);
+			config_overwrite_kv("beacon.text",optarg);
 			break;
-		case 'l':
-			strncpy(config.logfile,optarg,sizeof(config.logfile) - 1);
+		case 'c':
+			strncpy(appConfig.config_file,optarg,sizeof(appConfig.config_file) - 1);
+			break;
+		case 'l': // logfile
+			//strncpy(config.logfile,optarg,sizeof(config.logfile) - 1);
+			config_overwrite_kv("logfile",optarg);
 			break;
 		case 'M':
 			appConfig.monitor_tnc = true;
@@ -258,15 +274,14 @@ int main(int argc, char* argv[]){
 	}
 
 	int rc;
+	if((rc = config_init(appConfig.config_file))<0){
+		ERROR("*** error: initialize the configuration, aborted.");
+	}
 
 	if((rc = log_init(config.logfile)) < 0){
 		printf("*** warning: log system initialize failed");
 	}
 
-	if((rc = config_init("/etc/tinyaprs.cfg"))<0){
-		ERROR("*** error: initialize the configuration, aborted.");
-		exit(1);
-	}
 	if((rc = poll_init()) < 0){
 		ERROR("*** error: initialize the poll module, aborted.");
 		exit(1);

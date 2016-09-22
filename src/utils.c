@@ -24,6 +24,7 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <math.h>
 
 #include "utils.h"
 
@@ -345,4 +346,78 @@ static int io_close(struct IOReader *reader){
 	return 0;
 }
 
+
+/*
+ *  split the "LAT,LON"
+ */
+static bool parse_location_arg(char* latlon,char* lato, size_t latoLen,char* lono,size_t lonoLen){
+	char buf[32];
+	int i = 0;
+	char *lat = buf, *lon = 0;
+	strncpy(buf,latlon,sizeof(buf) - 1);
+	while(buf[i] != 0){
+		if(buf[i] == ','){
+			buf[i] = 0;
+			if(sizeof(buf) - 1 - i >= 9){ // at least 9 chars of longitude
+				lon = buf + i + 1;
+			}
+			break;
+		}
+		i++;
+	}
+	if(lat && lon){
+		strncpy(lato,lat,latoLen);
+		strncpy(lono,lon,lonoLen);
+		return true;
+	}
+	return false;
+}
+
+static void convert_to_dms(char* input, double* deg, double *min, double *sec){
+	double l1 = atof(input);
+	double l1_deg = trunc(l1);
+	double l1_min_full = (l1 - l1_deg) * 60.f;
+	double l1_min = trunc(l1_min_full);
+	double l1_sec = l1_min_full - l1_min;
+	printf("%f\n",l1);
+	printf("%f\n",l1_deg);
+	printf("%f\n",l1_min_full);
+	printf("%f\n",l1_min);
+	printf("%f\n",l1_sec);
+
+	*deg = l1_deg;
+	*min = l1_min;
+	*sec = l1_sec;
+}
+
+/*
+ * latlon splited by " 30.273815,120.144578" --> 30/16/25.734,120/08/
+ * .lat = "3012.48N","12008.48E",
+ */
+void aprs_calc_location(char* latlon, char* out,size_t len){
+	char lat[10],lon[10];
+	if(!parse_location_arg(latlon,lat,sizeof(lat) -1,lon,sizeof(lon) -1)){
+		return;
+	}
+
+	// calculate the input xx.xxxx to
+	double lat_deg,lat_min,lat_sec;
+	double lon_deg,lon_min,lon_sec;
+	convert_to_dms(lat,&lat_deg,&lat_min,&lat_sec);
+	convert_to_dms(lon,&lon_deg,&lon_min,&lon_sec);
+
+	snprintf(out,len,"%02.0f%02.0f.%02.0f%c,%02.0f%02.0f.%02.0f%c",lat_deg,lat_min,(lat_sec * 100),(lat_deg > 0?'N':'S'),lon_deg,lon_min,(lon_sec * 100),(lon_deg > 0?'E':'W'));
+}
+
+#ifdef APRS_UTIL_STANDALONE
+int main(int argc, char* argv[]){
+	if(argc < 2){
+		printf("APRS Utils\n");
+		return 0;
+	}
+	char buf[64];
+	aprs_calc_location(argv[1],buf,sizeof(buf) -1);
+	printf("APRS Location: %s\n",buf);
+}
+#endif
 
