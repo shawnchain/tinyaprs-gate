@@ -50,6 +50,10 @@ static struct option long_opts[] = {
 	{ 0, 0, 0, 0, },
 };
 
+#ifndef VERSION
+#define VERSION "snapshot"
+#endif
+
 static void print_help(int argc, char *argv[]){
 	printf("TinyAPRS iGate Daemon, ver 0.5(%s)\n",VERSION);
 	printf("Usage:\n");
