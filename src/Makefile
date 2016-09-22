@@ -21,7 +21,7 @@ aprs_util:
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: tinyaprs aprs_util
+all: tinyaprs
 
 install: tinyaprs 
 	cp -f tinyaprs $(PREFIX)/sbin/
