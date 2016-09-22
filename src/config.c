@@ -54,7 +54,7 @@ Config config = {
 			.lon = "12008.48E",
 			.text = "431.040MHz iGate/TinyAPRS"
 		},
-		.logfile="/tmp/tinyaprs.log",
+		.logfile="/var/log/tinyaprs.log",
 };
 
 /**

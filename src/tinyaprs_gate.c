@@ -21,11 +21,15 @@
 #include "config.h"
 #include "log.h"
 
+static int iserver_monitor_main();
+static int tnc_monitor_main();
+
 static AppConfig appConfig = {
 		.in_background = false,
 		.pid_file = "/tmp/tinyaprs.pid",
 		.log_file = "/tmp/tinyaprs.log",
 		.monitor_tnc = false,
+		.server_monitor = false,
 };
 
 static struct option long_opts[] = {
@@ -38,6 +42,7 @@ static struct option long_opts[] = {
 	{ "location", required_argument, 0, 'L'},
 	{ "text", required_argument, 0, 'T'},
 	{ "monitor", no_argument, 0, 'M'},
+	{ "iserver", no_argument, 0, 'I'},
 	{ "log", required_argument, 0, 'l', },
 	{ "daemon", no_argument, 0, 'd', },
 	{ "help", no_argument, 0, 'h', },
@@ -57,7 +62,8 @@ static void print_help(int argc, char *argv[]){
 	printf("  -S, --symbol                        set the beacon symbol (see APRS symbol table)\n");
 	printf("  -L, --location                      set the beacon location (see APRS latlon format)\n");
 	printf("  -T, --text                          set the beacon text\n");
-	printf("  -M, --monitor                       print RF packets to STDOUT with TNC2 monitor format\n");
+	printf("  -M, --monitor                       print received RF packets to STDOUT (TNC2 monitor format)\n");
+	printf("  -I, --iserver                       print received IS packets to STDOUT (TNC2 monitor format)\n");
 	printf("  -l, --log                           log file name\n");
 	printf("  -d, --daemon                        run as daemon process\n");
 	printf("  -h, --help                          print this help\n");
@@ -187,7 +193,7 @@ static void parse_location_arg(char* loc){
 
 int main(int argc, char* argv[]){
 	int opt;
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:Mdh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:MIdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H': // host
@@ -221,6 +227,9 @@ int main(int argc, char* argv[]){
 		case 'M':
 			appConfig.monitor_tnc = true;
 			break;
+		case 'I':
+			appConfig.server_monitor = true;
+			break;
 		case 'd':
 			appConfig.in_background = true;
 			break;
@@ -234,7 +243,7 @@ int main(int argc, char* argv[]){
 	}
 
 	// disable background if monitor mode is on;
-	if(appConfig.monitor_tnc){
+	if(appConfig.monitor_tnc || appConfig.server_monitor){
 		appConfig.in_background = false;
 	}
 
@@ -262,6 +271,7 @@ int main(int argc, char* argv[]){
 		ERROR("*** error: initialize the poll module, aborted.");
 		exit(1);
 	}
+
 	if((rc = tnc_init(config.tnc[0].device,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
 		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
@@ -269,7 +279,9 @@ int main(int argc, char* argv[]){
 
 	// don't initialize tier2 connect and beacon under monitor mode
 	if(appConfig.monitor_tnc){
-		INFO("Running TNC Monitor");
+		tnc_monitor_main();
+	}else if(appConfig.server_monitor){
+		iserver_monitor_main();
 	}else{
 		if((rc = tier2_client_init(config.server)) < 0){
 			ERROR("*** error initialize the APRS tier2 client, aborted.");
@@ -279,15 +291,44 @@ int main(int argc, char* argv[]){
 			ERROR("*** error initialize the Beacon module, aborted.");
 			exit(1);
 		}
+		// the main loop
+		while(true){
+			tnc_run();
+			if(! appConfig.monitor_tnc){
+				tier2_client_run();
+				beacon_run();
+			}
+			poll_run();
+		}
+	}
+}
+
+static int iserver_monitor_main(){
+	INFO("Running APRS-IS Server Monitor");
+	int rc = 0;
+	if((rc = tier2_client_init(config.server)) < 0){
+		ERROR("*** error initialize the APRS tier2 client, aborted.");
+		exit(1);
 	}
 
-	// the main loop
 	while(true){
-		tnc_run();
-		if(! appConfig.monitor_tnc){
-			tier2_client_run();
-			beacon_run();
-		}
+		tier2_client_run();
 		poll_run();
 	}
+	return 0;
+}
+
+static int tnc_monitor_main(){
+	INFO("Running TNC Monitor");
+	int rc = 0;
+	if ((rc = tnc_init(config.tnc[0].device, 9600, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
+		ERROR("*** error: initialize the TNC module, aborted.");
+		exit(1);
+	}
+
+	while(true){
+		tnc_run();
+		poll_run();
+	}
+	return 0;
 }
