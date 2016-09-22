@@ -191,8 +191,8 @@ static void parse_location_arg(char* loc){
 	if(lat && lon){
 		//strncpy(config.beacon.lat,lat,sizeof(config.beacon.lat)  - 1);
 		//strncpy(config.beacon.lon,lon,sizeof(config.beacon.lon)  - 1);
-		config_overwrite_kv("beacon.lat",optarg);
-		config_overwrite_kv("beacon.lon",optarg);
+		config_overwrite_kv("beacon.lat",lat);
+		config_overwrite_kv("beacon.lon",lon);
 	}
 }
 
