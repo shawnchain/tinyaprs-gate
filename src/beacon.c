@@ -71,7 +71,7 @@ int beacon_run(){
 		payload[i++] = '\r';
 		payload[i++] = '\n';
 		payload[i] = '\0';
-		DBG("\n>Beaconing: %.*s",i - 3,payload);
+		DBG("\n>Beaconing: %.*s",i - 2,payload);
 		int rc = tier2_client_publish(payload,i);
 		if(rc < 0){
 			DBG("Beaconing failed, %d",rc);
