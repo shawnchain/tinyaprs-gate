@@ -28,10 +28,12 @@ static int log_open(bool overwrite){
 	else
 		logfile = fopen(logfileName,"a");
 	if(!logfile){
-		log_log("ERROR",__FILE__,"open log file failed, %s",logfileName);
+		//log_log("ERROR",__FILE__,"open log file failed, %s",logfileName);
+		printf("open log file failed, %s\n",logfileName);
 		return -1;
 	}else{
-		log_log("INFO ",__FILE__,"open log file success, %s",logfileName);
+		//log_log("INFO ",__FILE__,"open log file success, %s",logfileName);
+		printf("open log file success, %s\n",logfileName);
 	}
 
 	// get log file size if appending
@@ -43,11 +45,14 @@ static int log_open(bool overwrite){
 		memset(&st,0,sizeof(struct stat));
 		stat(logfileName,&st);
 		logSize = st.st_size;
+		//log_log("INFO ",__FILE__,"log file size, %d",logSize);
+		printf("log file size, %d\n",(int)logSize);
 	}
 	return 0;
 }
 
 static int log_rotate(){
+	int rc = 0;
 	// close the log file
 	if(!logfile) return -1;
 	fclose(logfile);
@@ -58,9 +63,14 @@ static int log_rotate(){
 	// rename to $logfileName.1
 	char logfileName2[150];
 	snprintf(logfileName2, sizeof(logfileName2) - 1, "%s.1",logfileName);
+	// remove the existing old file
+	remove(logfileName2);
 	rename(logfileName,logfileName2);
 	// reopen with overwrite
-	return log_open(to_overwrite);
+	//log_log("INFO ",__FILE__,"log file rotated");
+	printf("log file rotated\n");
+	rc = log_open(to_overwrite);
+	return rc;
 }
 
 int log_init(const char* logfile){
@@ -105,6 +115,7 @@ void log_log(const char* tag, const char* module, const char* msg, ...) {
 
 	if(bytesPrinted > 0){
 		logSize += bytesPrinted;
+		//printf("logsize: %d\n",(int)logSize);
 		if(logSize >= logSizeThreshold){
 			// we should rotate the log right now!
 			log_rotate();

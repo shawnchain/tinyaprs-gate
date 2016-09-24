@@ -76,7 +76,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 	msg->ctrl = *buf++;
 	if (msg->ctrl != AX25_CTRL_UI)
 	{
-		WARN("Only UI frames are handled, got [%02X]\n", msg->ctrl);
+		WARN("Only UI frames [%02X] are handled, got [%02X]\n",AX25_CTRL_UI, msg->ctrl);
 		return -1;
 	}
 
