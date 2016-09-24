@@ -122,3 +122,19 @@ void log_log(const char* tag, const char* module, const char* msg, ...) {
 		}
 	}
 }
+
+void log_hexdump(void *d, size_t len) {
+	unsigned char *s;
+	size_t bytesPrinted = 0;
+	if(logfile){
+		for (s = d; len; len--, s++){
+			bytesPrinted += fprintf(logfile,"%02x ", (unsigned int) *s);
+		}
+		bytesPrinted += fprintf(logfile,"\n");
+		fflush(logfile);
+	}
+	for (s = d; len; len--, s++){
+		printf("%02x ", (unsigned int) *s);
+	}
+	printf("\n");
+}

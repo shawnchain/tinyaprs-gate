@@ -8,6 +8,8 @@
 #ifndef SRC_LOG_H_
 #define SRC_LOG_H_
 
+#include <sys/types.h>
+
 //////////////////////////////////////////////////////////////////
 // Simple logger
 #ifdef DEBUG
@@ -21,5 +23,5 @@
 
 int log_init(const char* logfile);
 void log_log(const char* tag, const char* module, const char* message, ...);
-
+void log_hexdump(void *d, size_t len);
 #endif /* SRC_LOG_H_ */

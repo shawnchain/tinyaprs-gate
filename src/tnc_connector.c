@@ -196,7 +196,7 @@ static void tnc_received(uint8_t* data, size_t len){
 		AX25Msg msg;
 		if(ax25_decode(data,len,&msg) < 0){
 			INFO("Unsupported frame, %d bytes",len);
-			hexdump(data,len);
+			log_hexdump(data,len);
 		}else{
 			if(client_message_callback){
 				client_message_callback(&msg);

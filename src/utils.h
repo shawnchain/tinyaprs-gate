@@ -53,13 +53,6 @@ static inline int set_nonblock(int sockfd) {
 	return 0;
 }
 
-static inline void hexdump(void *d, size_t len) {
-	unsigned char *s;
-	for (s = d; len; len--, s++)
-		printf("%02x ", (unsigned int) *s);
-	printf("\n");
-}
-
 void stringdump(void *d, size_t len);
 
 
