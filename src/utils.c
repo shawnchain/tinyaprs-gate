@@ -358,8 +358,8 @@ static int io_close(struct IOReader *reader) {
 	return 0;
 }
 
-static inline int trunc(double dbl){
-	return (int)(dbl * 1000000) / 1000000;
+static inline uint32_t trunc(double dbl){
+	return (uint32_t)(dbl * 1000000) / 1000000;
 }
 
 /*
