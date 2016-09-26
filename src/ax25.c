@@ -47,7 +47,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 	DECODE_CALL(buf, msg->src.call);
 	msg->src.ssid = (*buf >> 1) & 0x0F;
 
-	INFO("SRC[%.6s-%d], DST[%.6s-%d]\n", msg->src.call, msg->src.ssid, msg->dst.call, msg->dst.ssid);
+	INFO("SRC[%.6s-%d], DST[%.6s-%d]", msg->src.call, msg->src.ssid, msg->dst.call, msg->dst.ssid);
 
 	/* Repeater addresses */
 	#if CONFIG_AX25_RPT_LST
@@ -57,7 +57,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 			msg->rpt_lst[msg->rpt_cnt].ssid = (*buf >> 1) & 0x0F;
 			AX25_SET_REPEATED(msg, msg->rpt_cnt, (*buf & 0x80));
 
-			INFO("RPT%d[%.6s-%d]%c\n", msg->rpt_cnt,
+			INFO("RPT%d[%.6s-%d]%c", msg->rpt_cnt,
 				msg->rpt_lst[msg->rpt_cnt].call,
 				msg->rpt_lst[msg->rpt_cnt].ssid,
 				(AX25_REPEATED(msg, msg->rpt_cnt) ? '*' : ' '));
@@ -69,27 +69,27 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 			uint8_t ssid;
 			DECODE_CALL(buf, rpt);
 			ssid = (*buf >> 1) & 0x0F;
-			LOG_INFO("RPT[%.6s-%d]\n", rpt, ssid);
+			LOG_INFO("RPT[%.6s-%d]", rpt, ssid);
 		}
 	#endif
 
 	msg->ctrl = *buf++;
 	if (msg->ctrl != AX25_CTRL_UI)
 	{
-		WARN("Only UI frames [%02X] are handled, got [%02X]\n",AX25_CTRL_UI, msg->ctrl);
+		WARN("Only UI frames [%02X] are handled, got [%02X]",AX25_CTRL_UI, msg->ctrl);
 		return -1;
 	}
 
 	msg->pid = *buf++;
 	if (msg->pid != AX25_PID_NOLAYER3)
 	{
-		WARN("Only frames without layer3 protocol are handled, got [%02X]\n", msg->pid);
+		WARN("Only frames without layer3 protocol are handled, got [%02X]", msg->pid);
 		return -1;
 	}
 
 	msg->len = len /*- 2*/ - (buf - data);
 	msg->info = buf;
-	INFO("DATA: %.*s\n", msg->len, msg->info);
+	INFO("DATA: %.*s", msg->len, msg->info);
 	return 1;
 }
 

@@ -124,5 +124,5 @@ void io_init_timeoutreader(struct IOReader *reader, int fd, uint8_t* buffer, siz
 
 //static void aprs_calc_phgr(uint16_t txPower,uint16_t antGain,uint16_t txIerval,uint16_t hightAGL,uint16_t antDir,char* comments, char* out, size_t len);
 void aprs_calc_location(char* latlon,char* out,size_t len);
-
+short aprs_calc_hash(const char* thecall);
 #endif /* SRC_UTILS_H_ */

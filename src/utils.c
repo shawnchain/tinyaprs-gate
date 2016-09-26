@@ -21,10 +21,10 @@
 #include <stdarg.h>
 #include <sys/time.h>
 
+#include <ctype.h>
 #include <strings.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <math.h>
 
 #include "utils.h"
 
@@ -358,7 +358,10 @@ static int io_close(struct IOReader *reader) {
 	return 0;
 }
 
-#ifdef APRS_UTIL_STANDALONE
+static inline int trunc(double dbl){
+	return (int)(dbl * 1000000) / 1000000;
+}
+
 /*
  *  split the "LAT,LON"
  */
@@ -400,7 +403,7 @@ static void convert_to_dms(char* input, double* deg, double *min, double *sec) {
 	 printf("%f\n",l1_min_full);
 	 printf("%f\n",l1_min);
 	 printf("%f\n",l1_sec);
-	 */
+	*/
 
 	*deg = l1_deg;
 	*min = l1_min;
@@ -429,14 +432,55 @@ void aprs_calc_location(char* latlon, char* out, size_t len) {
 			lon_min, (lon_sec * 100), (lon_deg > 0 ? 'E' : 'W'));
 }
 
-int main(int argc, char* argv[]) {
-	if(argc < 2) {
-		printf("APRS Utils\n");
-		return 0;
-	}
+#define kkey 0x73e2
+short aprs_calc_hash(const char* thecall){
+  char rootcall[10];     // need to copy call to remove ssid from parse
+  char *p1 = rootcall;
+
+  while ((*thecall != '-') && (*thecall != 0)) *p1++ = toupper(*thecall++);
+    *p1 = 0;
+
+  short hash = kkey;     // initialize with the key value
+  short i = 0;
+  short len = strlen(rootcall);
+  char *ptr = rootcall;
+
+  while (i < len) {         // loop through the string two bytes at a time
+    hash ^= (*ptr++)<<8;   // xor high byte with accumulated hash
+    hash ^= (*ptr++);     // xor low byte with accumulated hash
+    i += 2;
+  }
+  return hash & 0x7fff;     // mask off the high bit so number is always positive
+}
+
+#ifdef APRS_UTIL_STANDALONE
+static void aprsutil_usage(int argc, char* argv[]){
+	printf("APRS Utils\n");
+	printf("    aprsutil location LAT,LON\t\tConvert the APRS location\n");
+	printf("    aprsutil hash CALLSIGN\t\tPrint the passcode\n");
+}
+
+static void aprsutil_location(int argc, char* argv[]){
 	char buf[64];
-	aprs_calc_location(argv[1],buf,sizeof(buf) -1);
+	aprs_calc_location(argv[2],buf,sizeof(buf) -1);
 	printf("APRS Location: %s\n",buf);
+}
+
+static void aprsutil_hash(int argc, char* argv[]){
+	char* callsign = argv[1];
+	short hash = aprs_calc_hash(callsign);
+	printf("%s -> %d\n",callsign,hash);
+}
+
+int main(int argc, char* argv[]) {
+	if(argc < 3) {
+		aprsutil_usage(argc,argv);
+	}else if(strncmp("location",argv[1],8) == 0){
+		aprsutil_location(argc,argv);
+	}else if(strncmp("hash",argv[1],4) == 0){
+		aprsutil_hash(argc,argv);
+	}
+	return 0;
 }
 #endif
 
