@@ -26,6 +26,8 @@
 #include <sys/types.h>
 #include <netdb.h>
 
+#include "hash.h"
+
 #include "utils.h"
 
 int resolve_host(const char *hostname_port_pair /*rotate.aprs2.net:14580*/,
@@ -452,35 +454,4 @@ short aprs_calc_hash(const char* thecall){
   }
   return hash & 0x7fff;     // mask off the high bit so number is always positive
 }
-
-#ifdef APRS_UTIL_STANDALONE
-static void aprsutil_usage(int argc, char* argv[]){
-	printf("APRS Utils\n");
-	printf("    aprsutil location LAT,LON\t\tConvert the APRS location\n");
-	printf("    aprsutil hash CALLSIGN\t\tPrint the passcode\n");
-}
-
-static void aprsutil_location(int argc, char* argv[]){
-	char buf[64];
-	aprs_calc_location(argv[2],buf,sizeof(buf) -1);
-	printf("APRS Location: %s\n",buf);
-}
-
-static void aprsutil_hash(int argc, char* argv[]){
-	char* callsign = argv[1];
-	short hash = aprs_calc_hash(callsign);
-	printf("%s -> %d\n",callsign,hash);
-}
-
-int main(int argc, char* argv[]) {
-	if(argc < 3) {
-		aprsutil_usage(argc,argv);
-	}else if(strncmp("location",argv[1],8) == 0){
-		aprsutil_location(argc,argv);
-	}else if(strncmp("hash",argv[1],4) == 0){
-		aprsutil_hash(argc,argv);
-	}
-	return 0;
-}
-#endif
 
