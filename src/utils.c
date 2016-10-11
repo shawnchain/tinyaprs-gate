@@ -106,6 +106,23 @@ time_t get_time_milli_seconds() {
 	return time_in_mill;
 }
 
+void hexdump(void *d, size_t len) {
+	unsigned char *s;
+	uint16_t i = 0;
+	printf("=======================================================================\n");
+	for (s = d; len; len--, s++){
+		printf("%02x ", *s);
+		i++;
+		if(i > 0){
+			if(i % 16 == 0)
+				printf("\n");
+			else if(i % 8 == 0)
+				printf("\t");
+		}
+	}
+	printf("\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+}
+
 void stringdump(void *d, size_t len) {
 	unsigned char *s;
 	printf(

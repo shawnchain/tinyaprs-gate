@@ -148,6 +148,7 @@ static int gate_ax25_message(AX25Msg* msg){
 	return 0;
 }
 
+static uint32_t count = 0;
 /**
  * Callback method for tnc data received
  */
@@ -157,7 +158,8 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 	// dump message
 	char buf[2048];
 	ax25_print(buf,sizeof(buf) - 1,msg);
-	INFO("\n>From RF: %s",buf);
+	count++;
+	INFO("\n>[%d] From RF: %s",count,buf);
 
 	// Monitor mode
 	if(appConfig.monitor_tnc){

@@ -15,7 +15,6 @@
 #include "hash.h"
 
 //#ifdef APRS_UTIL_STANDALONE
-#if 1
 static void aprsutil_usage(int argc, char* argv[]){
 	printf("APRS Utils\n");
 	printf("    aprsutil location LAT,LON\t\tConvert the APRS location\n");
@@ -61,6 +60,5 @@ int main(int argc, char* argv[]) {
 	}
 	return 0;
 }
-#endif
 
 #endif /* SRC_APRS_UTIL_C_ */

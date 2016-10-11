@@ -53,6 +53,7 @@ static inline int set_nonblock(int sockfd) {
 	return 0;
 }
 
+void hexdump(void *d, size_t len);
 void stringdump(void *d, size_t len);
 
 
