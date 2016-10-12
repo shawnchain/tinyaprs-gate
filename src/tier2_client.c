@@ -20,6 +20,7 @@
 #include <sys/uio.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include "tinyaprs_gate.h"
 #include "utils.h"
@@ -149,6 +150,11 @@ static int tier2_client_connect() {
 	if ((sockfd = socket((&server_addr)->sa.sa_family, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		ERROR("*** socket() failed: %s.", strerror(errno));
 		return -1;
+	}
+
+	int optval = 1;
+	if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int)) < 0){
+	    WARN("*** can not set TCP_NODELAY option on  socket (%s)\n", strerror(errno));
 	}
 
 	if (connect(sockfd, (struct sockaddr *) &server_addr, sizeof_sockaddr(&server_addr)) < 0) {
