@@ -38,6 +38,7 @@ static struct option long_opts[] = {
 	{ "passcode", required_argument, 0, 'P', },
 	{ "filter", required_argument, 0, 'F', },
 	{ "device", required_argument, 0, 'D', },
+	{ "baudrate", required_argument, 0, 'B', },
 	{ "symbol", required_argument, 0, 'S', },
 	{ "location", required_argument, 0, 'L', },
 	{ "text", required_argument, 0, 'T', },
@@ -63,7 +64,8 @@ static void print_help(int argc, char *argv[]){
 	printf("  -C, --callsign                      callsign for the APRS-IS connection\n");
 	printf("  -P, --passcode                      passcode for the APRS-IS connection\n");
 	printf("  -F, --filter                        receive filter for the APRS-IS connection\n");
-	printf("  -D, --device                        specify tnc[0] device path\n"); /*-D /dev/ttyUSB0?AT+KISS=1;*/
+	printf("  -D, --device                        specify path for tnc[0] device\n"); /*-D /dev/ttyUSB0?AT+KISS=1;*/
+	printf("  -B, --baudrate                      specify baudrate for tnc[0] device \n"); /*-B 115200*/
 	printf("  -S, --symbol                        set the beacon symbol (see APRS symbol table)\n");
 	printf("  -L, --location                      set the beacon location (see APRS latlon format)\n");
 	printf("  -T, --text                          set the beacon text\n");
@@ -205,28 +207,26 @@ static void parse_location_arg(char* loc){
 int main(int argc, char* argv[]){
 	int opt;
 
-	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:S:L:T:l:c:MIdh",
+	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:B:S:L:T:l:c:MIdh",
 				long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H': // host
-			//strncpy(config.server, optarg, sizeof(config.server) -1);
 			config_overwrite_kv("server",optarg);
 			break;
 		case 'C': // callsign
-			//strncpy(config.callsign, optarg, sizeof(config.callsign) - 1);
 			config_overwrite_kv("callsign",optarg);
 			break;
 		case 'P': // passcode
-			//strncpy(config.passcode, optarg, sizeof(config.passcode) - 1);
 			config_overwrite_kv("passcode",optarg);
 			break;
 		case 'F': // filter
-			//strncpy(config.filter, optarg, sizeof(config.filter) - 1);
 			config_overwrite_kv("filter",optarg);
 			break;
 		case 'D': // tnc device
-			//strncpy(config.tnc[0].device, optarg, sizeof(config.tnc[0].device) - 1);
 			config_overwrite_kv("tnc0.device",optarg);
+			break;
+		case 'B':
+			config_overwrite_kv("tnc0.baudrate",optarg);
 			break;
 		case 'S': // beacon symbol
 			//strncpy(config.beacon.symbol,optarg,sizeof(config.beacon.symbol) -1);
@@ -293,7 +293,7 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-	if((rc = tnc_init(config.tnc[0].device,9600,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
+	if((rc = tnc_init(config.tnc[0].device,config.tnc[0].baudrate,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
 		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}
@@ -342,7 +342,7 @@ static int iserver_monitor_main(){
 static int tnc_monitor_main(){
 	INFO("Running TNC Monitor");
 	int rc = 0;
-	if ((rc = tnc_init(config.tnc[0].device, 9600, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
+	if ((rc = tnc_init(config.tnc[0].device, config.tnc[0].baudrate, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
 		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}

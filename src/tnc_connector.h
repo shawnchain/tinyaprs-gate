@@ -8,9 +8,11 @@
 #ifndef SRC_TNC_CONNECTOR_H_
 #define SRC_TNC_CONNECTOR_H_
 
+#include <stdint.h>
+
 typedef struct{
 	char devname[32];
-	int  baudrate;
+	int32_t  baudrate;
 	char model[32];
 	char firmware_rev[32];
 	char board_rev[32];
@@ -24,7 +26,7 @@ typedef void (*tnc_ax25_decode_callback)(struct AX25Msg*);
 /**
  * Initialize the TNC
  */
-int tnc_init(const char* devname, int baudrate, const char* model, char** initCmds, tnc_ax25_decode_callback callback);
+int tnc_init(const char* devname, int32_t baudrate, const char* model, char** initCmds, tnc_ax25_decode_callback callback);
 
 /**
  *

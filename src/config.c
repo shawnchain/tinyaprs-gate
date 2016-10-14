@@ -32,18 +32,22 @@ static char config_keys[64][32] = {
 	"tnc0.model",
 	"tnc0.name",
 	"tnc0.init",
+	"tnc0.baudrate",
 	"tnc1.device",
 	"tnc1.model",
 	"tnc1.name",
 	"tnc1.init",
+	"tnc1.baudrate",
 	"tnc2.device",
 	"tnc2.model",
 	"tnc2.name",
 	"tnc2.init",
+	"tnc2.baudrate",
 	"tnc3.device",
 	"tnc3.model",
 	"tnc3.name",
 	"tnc3.init",
+	"tnc3.baudrate",
 	""
 };
 
@@ -62,18 +66,22 @@ typedef enum{
 	tnc0_model,
 	tnc0_name,
 	tnc0_init,
+	tnc0_baudrate,
 	tnc1_device,
 	tnc1_model,
 	tnc1_name,
 	tnc1_init,
+	tnc1_baudrate,
 	tnc2_device,
 	tnc2_model,
 	tnc2_name,
 	tnc2_init,
+	tnc2_baudrate,
 	tnc3_device,
 	tnc3_model,
 	tnc3_name,
 	tnc3_init,
+	tnc3_baudrate,
 	not_found = -1,
 }config_key;
 
@@ -130,9 +138,15 @@ static bool config_is_overwritten(char* key){
 	return false;
 }
 
+inline static void _assign_value_long(int32_t *out,char* str){
+	printf("convert long value: %s\n",str);
+	int32_t val = atol(str);
+	if(val >=0) *out = val;
+}
+
 static int config_get_kv(Config *pconfig, char* key, char* value, size_t bufLen){
 	config_key keyIndex = config_get_key_index(key);
-
+	uint32_t *valueLong = (uint32_t*)value;
 	switch(keyIndex){
 
 	case server:
@@ -180,6 +194,9 @@ static int config_get_kv(Config *pconfig, char* key, char* value, size_t bufLen)
 	case tnc0_init:
 		strncpy(value,pconfig->tnc[0].init_cmd,bufLen);
 		break;
+	case tnc0_baudrate:
+		*valueLong = pconfig->tnc[0].baudrate;
+		break;
 
 	case tnc1_device:
 		strncpy(value,pconfig->tnc[1].device,bufLen);
@@ -192,6 +209,9 @@ static int config_get_kv(Config *pconfig, char* key, char* value, size_t bufLen)
 		break;
 	case tnc1_init:
 		strncpy(value,pconfig->tnc[1].init_cmd,bufLen);
+		break;
+	case tnc1_baudrate:
+		*valueLong = pconfig->tnc[1].baudrate;
 		break;
 
 	case tnc2_device:
@@ -206,6 +226,9 @@ static int config_get_kv(Config *pconfig, char* key, char* value, size_t bufLen)
 	case tnc2_init:
 		strncpy(value,pconfig->tnc[2].init_cmd,bufLen);
 		break;
+	case tnc2_baudrate:
+		*valueLong = pconfig->tnc[2].baudrate;
+		break;
 
 	case tnc3_device:
 		strncpy(value,pconfig->tnc[3].device,bufLen);
@@ -218,6 +241,9 @@ static int config_get_kv(Config *pconfig, char* key, char* value, size_t bufLen)
 		break;
 	case tnc3_init:
 		strncpy(value,pconfig->tnc[3].init_cmd,bufLen);
+		break;
+	case tnc3_baudrate:
+		*valueLong = pconfig->tnc[3].baudrate;
 		break;
 
 	default:
@@ -277,6 +303,9 @@ static int config_set_kv(Config *pconfig, char* key, char* value){
 	case tnc0_init:
 		strncpy(pconfig->tnc[0].init_cmd,value,sizeof(config.tnc[0].init_cmd) - 1);
 		break;
+	case tnc0_baudrate:
+		_assign_value_long(&(pconfig->tnc[0].baudrate), value);
+		break;
 
 	case tnc1_device:
 		strncpy(pconfig->tnc[1].device,value,sizeof(config.tnc[1].device) - 1);
@@ -289,6 +318,9 @@ static int config_set_kv(Config *pconfig, char* key, char* value){
 		break;
 	case tnc1_init:
 		strncpy(pconfig->tnc[1].init_cmd,value,sizeof(config.tnc[1].init_cmd) - 1);
+		break;
+	case tnc1_baudrate:
+		_assign_value_long(&(pconfig->tnc[1].baudrate), value);
 		break;
 
 	case tnc2_device:
@@ -303,6 +335,9 @@ static int config_set_kv(Config *pconfig, char* key, char* value){
 	case tnc2_init:
 		strncpy(pconfig->tnc[2].init_cmd,value,sizeof(config.tnc[2].init_cmd) - 1);
 		break;
+	case tnc2_baudrate:
+		_assign_value_long(&(pconfig->tnc[2].baudrate), value);
+		break;
 
 	case tnc3_device:
 		strncpy(pconfig->tnc[3].device,value,sizeof(config.tnc[3].device) - 1);
@@ -315,6 +350,9 @@ static int config_set_kv(Config *pconfig, char* key, char* value){
 		break;
 	case tnc3_init:
 		strncpy(pconfig->tnc[3].init_cmd,value,sizeof(config.tnc[3].init_cmd) - 1);
+		break;
+	case tnc3_baudrate:
+		_assign_value_long(&(pconfig->tnc[3].baudrate), value);
 		break;
 
 	default:
@@ -351,13 +389,19 @@ static bool read_ini_file(FILE *file){
 		v = trimwhitespace(v);
 
 		if(config_is_overwritten(k)){
-			memset(ov,0,sizeof(ov));
-			config_get_kv(&overwriteConfig,k,ov,sizeof(ov) -1);
-			config_set_kv(&config,k,ov);
-			INFO("%s is overwritten from %s to %s",k,v,ov);
+			config_key keyIndex = config_get_key_index(k);
+			if(keyIndex == tnc0_baudrate){
+				// QUICK & DIRTY workaround for number values
+				config.tnc[0].baudrate = overwriteConfig.tnc[0].baudrate;
+			}else{
+				memset(ov,0,sizeof(ov));
+				config_get_kv(&overwriteConfig,k,ov,sizeof(ov) -1);
+				config_set_kv(&config,k,ov);
+				INFO("%s is overwritten from %s to %s",k,v,ov);
+			}
 		}else{
+			DBG("setting %s: %s",k,v);
 			config_set_kv(&config,k,v);
-			DBG("%s: %s",k,v);
 		}
 	}
 	return true;
@@ -394,7 +438,7 @@ static void read_json_file(FILE *file){
 #endif
 
 Config config = {
-		.server = "t2xwt.aprs2.net:14580",
+		.server = "asia.aprs2.net:14580",
 		.callsign="N0CALL",
 		.passcode="-1",
 		.filter="r/30.2731/120.1543/50",
@@ -406,6 +450,7 @@ Config config = {
 					.device="/dev/tty.SLAB_USBtoUART",
 					#endif
 					.model="tinyaprs",
+					.baudrate=9600,
 					.reopen_wait_time = 15,
 					.current_reopen_wait_time = 15,
 					.init_wait_time = 3,
@@ -415,14 +460,17 @@ Config config = {
 				{
 					.device="/dev/ttyUSB1",
 					.model="tinyaprs",
+					.baudrate=9600,
 				},
 				{
 					.device="/dev/ttyUSB2",
 					.model="tinyaprs",
+					.baudrate=9600,
 				},
 				{
 					.device="/dev/ttyUSB3",
 					.model="tinyaprs",
+					.baudrate=9600,
 				},
 			}
 		,

@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <time.h>
+#include <stdint.h>
 
 #include <strings.h>
 #include <sys/select.h>
@@ -27,6 +28,7 @@
 
 #include "kiss.h"
 #include "ax25.h"
+
 
 #include "config.h"
 
@@ -124,7 +126,7 @@ static int tnc_open(){
 #else
 	io_init_linereader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,tnc_received);
 #endif
-	INFO("tnc port opened \"%s\", fd is %d",tnc.devname,tncfd);
+	INFO("tnc port \"%s\" opened, baudrate=%d, fd=%d",tnc.devname,tnc.baudrate,tncfd);
 
 	// initialize
 	tnc_send_init_cmds();
@@ -384,7 +386,7 @@ static void tnc_switch_mode(tnc_mode mode){
 	}
 }
 
-int tnc_init(const char* _devname, int _baudrate, const char* _model, char** _initCmds , tnc_ax25_decode_callback cb){
+int tnc_init(const char* _devname, int32_t _baudrate, const char* _model, char** _initCmds , tnc_ax25_decode_callback cb){
 	bzero(&tnc,sizeof(tnc));
 
 	// copy the parameters

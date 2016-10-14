@@ -55,6 +55,7 @@ typedef struct{
 	char model[16];
 	char device[64];
 	char init_cmd[64];
+	int32_t baudrate;
 	int32_t reopen_wait_time;
 	int32_t current_reopen_wait_time;
 	int32_t init_wait_time;

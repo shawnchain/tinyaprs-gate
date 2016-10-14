@@ -11,7 +11,7 @@
 /**
  * Open serial port
  */
-int serial_port_open(const char* devName,int baudrate);
+int serial_port_open(const char* devName,int32_t baudrate);
 
 int serial_port_set_nonblock(int fd,int nonblock);
 

@@ -61,12 +61,18 @@ static int _select_baudrate(int input){
 	switch(input){
 	case 9600:
 		return B9600;
+	case 38400:
+		return B38400;
+	case 57600:
+		return B57600;
+	case 115200:
+		return B115200;
 	default:
 		return -1;
 	}
 }
 
-int serial_port_open(const char* portname,int baudrate){
+int serial_port_open(const char* portname,int32_t baudrate){
 	int fd;
 #ifdef __APPLE__
 	// open will block if O_NONBLOCK is not set
