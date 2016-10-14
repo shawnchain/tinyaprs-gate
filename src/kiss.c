@@ -228,7 +228,7 @@ static void kiss_decode_frame(struct KissReader *k){
 
 	switch(cmd){
 		case KISS_CMD_DATA:{
-			INFO("KISS - got data frame %d bytes",k->bufferLen - 1);
+			DBG("KISS - got data frame %d bytes",k->bufferLen - 1);
 			if(k->callback){
 				k->callback(k->buffer +1,k->bufferLen -1);
 			}

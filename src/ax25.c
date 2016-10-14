@@ -47,7 +47,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 	DECODE_CALL(buf, msg->src.call);
 	msg->src.ssid = (*buf >> 1) & 0x0F;
 
-	INFO("SRC[%.6s-%d], DST[%.6s-%d]", msg->src.call, msg->src.ssid, msg->dst.call, msg->dst.ssid);
+	DBG("SRC[%.6s-%d], DST[%.6s-%d]", msg->src.call, msg->src.ssid, msg->dst.call, msg->dst.ssid);
 
 	/* Repeater addresses */
 	#if CONFIG_AX25_RPT_LST
@@ -57,7 +57,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 			msg->rpt_lst[msg->rpt_cnt].ssid = (*buf >> 1) & 0x0F;
 			AX25_SET_REPEATED(msg, msg->rpt_cnt, (*buf & 0x80));
 
-			INFO("RPT%d[%.6s-%d]%c", msg->rpt_cnt,
+			DBG("RPT%d[%.6s-%d]%c", msg->rpt_cnt,
 				msg->rpt_lst[msg->rpt_cnt].call,
 				msg->rpt_lst[msg->rpt_cnt].ssid,
 				(AX25_REPEATED(msg, msg->rpt_cnt) ? '*' : ' '));
@@ -89,7 +89,7 @@ int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
 
 	msg->len = len /*- 2*/ - (buf - data);
 	msg->info = buf;
-	INFO("DATA: %.*s", msg->len, msg->info);
+	DBG("DATA: %.*s", msg->len, msg->info);
 	return 1;
 }
 
