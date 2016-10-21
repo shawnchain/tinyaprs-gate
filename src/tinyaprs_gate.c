@@ -341,11 +341,13 @@ static int iserver_monitor_main(){
 
 static int tnc_monitor_main(){
 	INFO("Running TNC Monitor");
+	/*
 	int rc = 0;
 	if ((rc = tnc_init(config.tnc[0].device, config.tnc[0].baudrate, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
 		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}
+	*/
 
 	while(true){
 		tnc_run();
