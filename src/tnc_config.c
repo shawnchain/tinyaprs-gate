@@ -44,20 +44,9 @@ enum {
 typedef struct{
 	uint8_t port;
 	uint8_t cmd;
-
 	uint8_t data[5120];   // kiss frame data
 	uint16_t dataLen;	   // kiss frame length
 }KissFrame;
-
-static int kiss_encode_ex(KissFrame *frame,uint8_t port, uint8_t cmd, uint8_t *payloadIn, uint16_t payloadInLen);
-static int kiss_decode_ex(KissFrame *kissFrame,uint8_t *payloadOut, uint16_t *payloadOutLen );
-
-//static void tnc_read_config(uint8_t cmd, uint8_t *dataOut, uint16_t *dataOutLen){
-//	uint8_t payload = 0xff;
-//	uint8_t payloadEncoded[4];
-//	uint16_t payloadEncodedLen = 4;
-//	kiss_encode_ex(0,cmd,&payload,1,payloadEncoded,&payloadEncodedLen);
-//}
 
 static int kiss_decode_ex(KissFrame *kissFrame, uint8_t *payloadOut, uint16_t *payloadOutLen) {
 	// byte 0 shold be 0xC0
@@ -137,68 +126,11 @@ static void kiss_encode_end(KissFrame *frame){
 }
 
 static int kiss_encode_ex(KissFrame *frame,uint8_t port, uint8_t cmd, uint8_t *payloadIn, uint16_t payloadInLen){
-#if 1
 	kiss_encode_begin(frame, port,cmd);
 	kiss_encode_append(frame, payloadIn, payloadInLen);
 	kiss_encode_end(frame);
 	return frame->dataLen;
-#else
-	uint16_t i = 0, o = 0;
-	frame->port = port;
-	frame->cmd = cmd;
-	uint8_t *out = frame->data;
-
-	out[o++] = KISS_FEND;
-	out[o++] = (frame->port << 4 | frame->cmd) ; // ch 0, cmd 0
-	for (i = 0; i < payloadInLen && o < sizeof((*frame).data) - 3; i++) {
-		uint8_t c = payloadIn[i];
-		switch (c) {
-		case KISS_FEND:
-			out[o++] = KISS_FESC;
-			out[o++] = KISS_TFEND;
-			break;
-		case KISS_FESC:
-			out[o++] = KISS_FESC;
-			out[o++] = KISS_TFESC;
-			break;
-		default:
-			out[o++] = c;
-		}
-	}
-	out[o++] = KISS_FEND;
-	frame->dataLen = o; //update the out data
-	return o;
-#endif
 }
-
-#if 0
-/* --
- * C0 00
- * 82 A0 B4 9A 88 A4 60
- * 9E 90 64 90 A0 9C 72
- * 9E 90 64 A4 88 A6 E0
- * A4 8C 9E 9C 98 B2 61
- * 03 F0
- * 21 36 30 32 39 2E 35 30 4E 2F 30 32 35 30 35 2E 34 33 45 3E 20 47 43 53 2D 38 30 31 20
- * C0
- * --
- */
-static uint8_t test_data_for_dec[] = {
-		0xC0, 0x00,
-		0x82, 0xA0, 0xB4, 0x9A, 0x88,
-		0xA4, 0x60, 0x21, 0x36, 0x30, 0x32, 0x39, 0x2E,
-		0x35, 0x30, 0x4E, 0x2F, 0x30, 0x32, 0x35, 0x30,
-		0x35, 0x2E, 0x34, 0x33, 0x45, 0x3E, 0x20, 0x47,
-		0x43, 0x53, 0x2D, 0x38, 0x30, 0x31, 0x20,
-		0xC0 };
-
-static uint8_t test_data_for_enc[] = {
-		0x21, 0x36, 0x30, 0x32, 0x39, 0x2E, 0x35, 0x30,
-		0x4E, 0x2F, 0x30, 0x32, 0x35, 0x30, 0x35, 0x2E,
-		0x34, 0x33, 0x45, 0x3E, 0x20, 0x47, 0x43, 0x53,
-		0x2D, 0x38, 0x30, 0x31, 0x20, };
-
-#endif
 
 static void _usage(int argc, char* argv[]) {
 	printf("TNC Configuration Util\n");
@@ -479,7 +411,7 @@ static void read_config(char* serialPath) {
 	dump_config();
 	// convert and save to local config file ./tnc.cfg
 
-#if 1
+#if 0
 	// TEST WRITE
 	INFO("Updating tnc params...");
 	tncData.settings.beacon.interval = 3600;
@@ -544,3 +476,33 @@ int main(int argc, char* argv[]) {
 	}
 	return 0;
 }
+
+
+#if 0
+/* --
+ * C0 00
+ * 82 A0 B4 9A 88 A4 60
+ * 9E 90 64 90 A0 9C 72
+ * 9E 90 64 A4 88 A6 E0
+ * A4 8C 9E 9C 98 B2 61
+ * 03 F0
+ * 21 36 30 32 39 2E 35 30 4E 2F 30 32 35 30 35 2E 34 33 45 3E 20 47 43 53 2D 38 30 31 20
+ * C0
+ * --
+ */
+static uint8_t test_data_for_dec[] = {
+		0xC0, 0x00,
+		0x82, 0xA0, 0xB4, 0x9A, 0x88,
+		0xA4, 0x60, 0x21, 0x36, 0x30, 0x32, 0x39, 0x2E,
+		0x35, 0x30, 0x4E, 0x2F, 0x30, 0x32, 0x35, 0x30,
+		0x35, 0x2E, 0x34, 0x33, 0x45, 0x3E, 0x20, 0x47,
+		0x43, 0x53, 0x2D, 0x38, 0x30, 0x31, 0x20,
+		0xC0 };
+
+static uint8_t test_data_for_enc[] = {
+		0x21, 0x36, 0x30, 0x32, 0x39, 0x2E, 0x35, 0x30,
+		0x4E, 0x2F, 0x30, 0x32, 0x35, 0x30, 0x35, 0x2E,
+		0x34, 0x33, 0x45, 0x3E, 0x20, 0x47, 0x43, 0x53,
+		0x2D, 0x38, 0x30, 0x31, 0x20, };
+
+#endif

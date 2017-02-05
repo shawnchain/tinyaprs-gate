@@ -25,6 +25,9 @@ aprsutil: aprs_util.o utils.o log.o hash.o
 tncfg: tnc_config.o utils.o log.o serial_port.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
+tncmock: tnc_mock.o utils.o log.o serial_port.o ax25.o kiss2.o
+	$(CC) $(LDFLAGS) -o $@ $^
+
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
