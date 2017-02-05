@@ -155,7 +155,7 @@ static int tnc_close(){
 static int tnc_receiving(int fd){
 	if(fd != tncfd) return -1;
 	int rc = reader.fnRead(&reader);
-	if(rc <=0){
+	if(rc < 0){
 		if(++tncErrorCount >= MAX_READ_WRITE_ERROR_COUNT){
 			INFO("too much receiving error encountered %d, closing port...",tncErrorCount);
 			tnc_close();
