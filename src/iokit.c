@@ -144,6 +144,7 @@ void io_make_line_reader(struct IOReader *reader, int fd,  void* readercb){
 	bzero(reader, sizeof(struct IOReader));
 	reader->fd = fd;
 	reader->buffer = malloc(DEFAULT_READ_BUFFER_SIZE);
+	reader->bufferRetained = true;
 	reader->maxBufferLen = DEFAULT_READ_BUFFER_SIZE;
 	reader->fnRead = _io_fn_read_line;
 	reader->fnRun = _io_fn_run;
@@ -156,6 +157,7 @@ void io_init_stream_reader(struct IOReader *reader, int fd, uint8_t* buffer, siz
 	bzero(reader, sizeof(struct IOReader));
 	reader->fd = fd;
 	reader->buffer = buffer;
+	reader->bufferRetained = false;
 	reader->maxBufferLen = bufferLen;
 	reader->fnRead = _io_fn_read_stream_timeout;
 	reader->fnRun = _io_fn_run;
@@ -259,9 +261,10 @@ static int _io_fn_close(struct IOReader *reader) {
 	reader->fd = -1;
 
 	// free internal buffer
-	if(reader->buffer){
+	if(reader->buffer && reader->bufferRetained){
 		free(reader->buffer);
 		reader->buffer = 0;
+		reader->bufferRetained = false;
 	}
 	bzero(reader, sizeof(struct IOReader));
 	return 0;

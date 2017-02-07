@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 //////////////////////////////////////////////////////////////////
 // The poll wrapper
@@ -40,6 +41,7 @@ struct IOReader{
 	int fd;
 	uint8_t* buffer;
 	size_t bufferLen;
+	bool bufferRetained;
 	io_method fnRead; 		// the read implementation
 	io_method fnRun;
 	io_method fnFlush;
