@@ -12,11 +12,11 @@ GIT_VERSION := $(shell git describe --abbrev=6 --always --tags)
 
 CC ?= gcc
 CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\"
-HEADERS = tinyaprs_gate.h tier2_client.h tnc_connector.h beacon.h utils.h serial_port.h slre.h kiss.h ax25.h json.h config.h log.h
+HEADERS = tinyaprs_gate.h is_connector.h tnc_connector.h beacon.h utils.h serial_port.h slre.h kiss.h ax25.h json.h config.h log.h iokit.h
 
 all: tinyaprs aprsutil tncfg
 
-tinyaprs: tinyaprs_gate.o tier2_client.o tnc_connector.o beacon.o utils.o serial_port.o slre.o kiss.o ax25.o json.o config.o log.o
+tinyaprs: tinyaprs_gate.o is_connector.o tnc_connector.o beacon.o utils.o serial_port.o slre.o kiss.o ax25.o json.o config.o log.o iokit.o
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
 aprsutil: aprs_util.o utils.o log.o hash.o
@@ -37,4 +37,4 @@ install: tinyaprs
 	cp -f tncfg  $(PREFIX)/sbin/
 
 clean:
-	rm -f tinyaprs aprsutil *.o
+	rm -f tinyaprs aprsutil aprsutil tncfg tncmock *.o

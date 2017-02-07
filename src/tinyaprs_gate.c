@@ -14,11 +14,12 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#include "tier2_client.h"
+#include "iokit.h"
 #include "tnc_connector.h"
 #include "beacon.h"
 #include "ax25.h"
 #include "config.h"
+#include "is_connector.h"
 #include "log.h"
 
 static int iserver_monitor_main();
@@ -143,7 +144,7 @@ static int gate_ax25_message(AX25Msg* msg){
 	// print to TNC-2 monitor format and publish
 	char txt[1024];
 	int len = ax25_print(txt,1021,msg);
-	if(tier2_client_publish(txt,len) < 0){
+	if(is_connector_publish(txt,len) < 0){
 		return -1;
 	}
 
@@ -285,10 +286,10 @@ int main(int argc, char* argv[]){
 	}
 
 	if((rc = log_init(config.logfile)) < 0){
-		printf("*** warning: log system initialize failed");
+		ERROR("*** warning: log system initialize failed\n");
 	}
 
-	if((rc = poll_init()) < 0){
+	if((rc = io_init()) < 0){
 		ERROR("*** error: initialize the poll module, aborted.");
 		exit(1);
 	}
@@ -304,7 +305,7 @@ int main(int argc, char* argv[]){
 	}else if(appConfig.server_monitor){
 		iserver_monitor_main();
 	}else{
-		if((rc = tier2_client_init(config.server)) < 0){
+		if((rc = is_connector_init(config.server)) < 0){
 			ERROR("*** error initialize the APRS tier2 client, aborted.");
 			exit(1);
 		}
@@ -316,10 +317,10 @@ int main(int argc, char* argv[]){
 		while(true){
 			tnc_run();
 			if(! appConfig.monitor_tnc){
-				tier2_client_run();
+				is_connector_run();
 				beacon_run();
 			}
-			poll_run();
+			io_run();
 		}
 	}
 }
@@ -327,14 +328,14 @@ int main(int argc, char* argv[]){
 static int iserver_monitor_main(){
 	INFO("Running APRS-IS Server Monitor");
 	int rc = 0;
-	if((rc = tier2_client_init(config.server)) < 0){
+	if((rc = is_connector_init(config.server)) < 0){
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
 
 	while(true){
-		tier2_client_run();
-		poll_run();
+		is_connector_run();
+		io_run();
 	}
 	return 0;
 }
@@ -351,7 +352,7 @@ static int tnc_monitor_main(){
 
 	while(true){
 		tnc_run();
-		poll_run();
+		io_run();
 	}
 	return 0;
 }

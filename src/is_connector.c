@@ -5,6 +5,8 @@
  *      Author: shawn
  */
 
+#include "is_connector.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,8 +28,8 @@
 #include "utils.h"
 #include "slre.h"
 
-#include "tier2_client.h"
 #include "config.h"
+#include "iokit.h"
 
 #define buffer_len 4 * 1024
 
@@ -49,18 +51,18 @@ static int tier2_client_disconnect();
 static int tier2_client_receive(int fd);
 static void tier2_client_keepalive();
 
-static void tier2_client_poll_callback(int fd, poll_state state){
+static void tier2_client_poll_callback(int fd, io_state state){
 	switch(state){
-		case poll_state_read:
+		case io_state_read:
 			tier2_client_receive(fd);
 			break;
-		case poll_state_write:
+		case io_state_write:
 			//TODO -flush the send buffer queue
 			break;
-		case poll_state_error:
+		case io_state_error:
 			tier2_client_disconnect();
 			break;
-		case poll_state_idle:
+		case io_state_idle:
 			break;
 		default:
 			break;
@@ -69,7 +71,7 @@ static void tier2_client_poll_callback(int fd, poll_state state){
 
 static char server[64];
 
-int tier2_client_init(const char* _host){
+int is_connector_init(const char* _host){
 	// copy the parameters
 	strncpy(server,_host,63);
 
@@ -96,7 +98,7 @@ int tier2_client_init(const char* _host){
 #define IDLE_TIMEOUT 90
 static int32_t current_reconnect_waittime = RECONNECT_WAITTIME;
 
-int tier2_client_run(){
+int is_connector_run(){
 	time_t t = time(NULL);
 	if(state == state_disconnected){
 		// try to reconnect
@@ -162,7 +164,7 @@ static int tier2_client_connect() {
 		return -EAGAIN;
 	}
 	set_nonblock(sockfd);
-	poll_add(sockfd,tier2_client_poll_callback);
+	io_add(sockfd,tier2_client_poll_callback);
 
 	state = state_connected;
 
@@ -172,7 +174,7 @@ static int tier2_client_connect() {
 static int tier2_client_disconnect(){
 	state = state_disconnected;
 	if(sockfd >= 0){
-		poll_remove(sockfd);
+		io_remove(sockfd);
 		close(sockfd);
 		sockfd = -1;
 	}
@@ -256,7 +258,7 @@ static int tier2_client_receive(int _sockfd) {
 		char loginCmd[512];
 		int cmdLen = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
 		INFO("Login Request: %.*s",cmdLen - 2 /*not logging the trailing CRLF chars*/, loginCmd);
-		tier2_client_send(loginCmd,cmdLen); // send login command
+		is_connector_send(loginCmd,cmdLen); // send login command
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
@@ -283,7 +285,7 @@ static int tier2_client_receive(int _sockfd) {
 	return 0;
 }
 
-int tier2_client_send(const char* data,size_t len){
+int is_connector_send(const char* data,size_t len){
 	int rc;
 	if(sockfd < 0){
 		return -1;
@@ -296,7 +298,7 @@ int tier2_client_send(const char* data,size_t len){
 	return rc;
 }
 
-int tier2_client_publish(const char* message, size_t len){
+int is_connector_publish(const char* message, size_t len){
 	if(state != state_server_verified){
 		if(state == state_server_unverified)
 			INFO("publish message aborted because callsign %.9s is NOT verified.",config.callsign);
@@ -304,12 +306,12 @@ int tier2_client_publish(const char* message, size_t len){
 			INFO("publish message aborted because tier2 connector is not ready yet.");
 		return -1;
 	}
-	return tier2_client_send(message,len);
+	return is_connector_send(message,len);
 }
 
 // keep alive
 static void tier2_client_keepalive() {
 	DBG("Sending keep-alive command.");
-	tier2_client_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
+	is_connector_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
 	last_keepalive = time(NULL);
 }

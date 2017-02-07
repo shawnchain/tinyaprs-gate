@@ -21,6 +21,7 @@
 #define WARN(msg, ...) log_log("WARN ",__FILE__,msg, ##__VA_ARGS__)
 #define ERROR(msg, ...) log_log("ERROR",__FILE__,msg, ##__VA_ARGS__)
 
+int log_fd();
 int log_init(const char* logfile);
 void log_log(const char* tag, const char* module, const char* message, ...);
 void log_hexdump(void *d, size_t len);

@@ -20,17 +20,18 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include "tier2_client.h"
 #include "utils.h"
 #include "fifobuf.h"
 #include "serial_port.h"
 #include "slre.h"
 
+#include "iokit.h"
 #include "kiss.h"
 #include "ax25.h"
 
 
 #include "config.h"
+#include "is_connector.h"
 
 TNC tnc; // shared device instance
 
@@ -83,20 +84,20 @@ static int tnc_send_flush(int fd);
 static bool tnc_can_write();
 static int tnc_parse_device_info(uint8_t* data, size_t len);
 
-static void tnc_poll_callback(int fd, poll_state state){
+static void tnc_poll_callback(int fd, io_state state){
 	switch(state){
-		case poll_state_read:
+		case io_state_read:
 			tnc_receiving(fd);
 			break;
-		case poll_state_write:
+		case io_state_write:
 			//flush the send buffer queue
 			tnc_send_flush(fd);
 			break;
-		case poll_state_error:
+		case io_state_error:
 			INFO("Polled error, closing port...");
 			tnc_close();
 			break;
-		case poll_state_idle:
+		case io_state_idle:
 			//DBG("tnc idle");
 			break;
 		default:
@@ -122,9 +123,9 @@ static int tnc_open(){
 	tncErrorCount = 0;
 	last_keepalive = 0;
 #if 1
-	io_init_timeoutreader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,350/*read timeout set to 350ms*/,tnc_received);
+	io_init_stream_reader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,350/*read timeout set to 350ms*/,tnc_received);
 #else
-	io_init_linereader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,tnc_received);
+	io_init_line_reader(&reader,tncfd,read_buffer,MAX_READ_BUFFER_LEN,tnc_received);
 #endif
 	INFO("tnc port \"%s\" opened, baudrate=%d, fd=%d",tnc.devname,tnc.baudrate,tncfd);
 
@@ -133,7 +134,7 @@ static int tnc_open(){
 
 	// set unblock and select
 	serial_port_set_nonblock(tncfd,1);
-	poll_add(tncfd,tnc_poll_callback);
+	io_add(tncfd,tnc_poll_callback);
 	return 0;
 }
 
@@ -141,7 +142,7 @@ static int tnc_close(){
 	if(state == state_close) return 0;
 
 	if(tncfd > 0){ // TODO - move to reader->fnClose();
-		poll_remove(tncfd);
+		io_remove(tncfd);
 		close(tncfd);
 		tncfd = -1;
 		reader.fd = -1;

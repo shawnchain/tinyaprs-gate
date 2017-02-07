@@ -67,63 +67,8 @@ static inline size_t bytes_available(int fd){
 
 time_t get_time_milli_seconds();
 
-//////////////////////////////////////////////////////////////////
-// The poll wrapper
-typedef enum{
-	poll_state_idle = 0,
-	poll_state_read,
-	poll_state_write,
-	poll_state_error
-}poll_state;
-
-typedef void (*poll_callback)(int,poll_state);
-int poll_init();
-int poll_add(int fd, poll_callback callback);
-int poll_remove(int fd);
-int poll_run();
-
-
-//////////////////////////////////////////////////////////////////
-// The BufferedReader wrapper
-struct IOReader;
-struct IOWriter;
-
-typedef void (*io_read_callback)(uint8_t*,size_t);
-typedef void (*io_write_callback)(size_t);
-typedef int (*io_method)(struct IOReader*);
-typedef int (*io_write_method)(struct IOWriter*);
-
-struct IOReader{
-	int fd;
-	uint8_t* buffer;
-	size_t bufferLen;
-	io_method fnRead; 		// the read implementation
-	io_method fnRun;
-	io_method fnFlush;
-	io_method fnClose;
-	io_read_callback callback;	// the callback then something read
-
-	// internal part
-	size_t maxBufferLen;
-	time_t timeout;				// read timeout
-	time_t lastRead;
-}Reader;
-
-struct IOWriter{
-	int fd;
-	char* buffer;
-	size_t bufferLen;
-	io_write_method fnWrite; 		// the read implementation
-	io_write_callback callback;		// the callback then something read
-
-	// internal part
-	size_t maxBufferLen;
-}Writer;
-
-void io_init_linereader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,void* readercb);
-void io_init_timeoutreader(struct IOReader *reader, int fd, uint8_t* buffer, size_t bufferLen,int timeout, void* readercb);
-
 //static void aprs_calc_phgr(uint16_t txPower,uint16_t antGain,uint16_t txIerval,uint16_t hightAGL,uint16_t antDir,char* comments, char* out, size_t len);
 void aprs_calc_location(char* latlon,char* out,size_t len);
 short aprs_calc_hash(const char* thecall);
+
 #endif /* SRC_UTILS_H_ */

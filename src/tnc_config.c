@@ -299,9 +299,11 @@ static bool _read_config(uint8_t cmd, uint8_t *dataOut, uint16_t *dataOutLen,boo
 
 	return _read_config_response(dataOut, dataOutLen, checkcrc);
 }
+
 /*
  * Construct the WRITE config payload and send to tnc
  */
+#if 0
 static bool _write_config(uint8_t cmd, uint8_t *data, uint16_t dataLen, bool needCrc, bool needResponse){
 	KissFrame req;
 	kiss_encode_begin(&req,0,cmd);
@@ -340,6 +342,7 @@ static bool _write_config(uint8_t cmd, uint8_t *data, uint16_t dataLen, bool nee
 	}
 	return true;
 }
+#endif
 
 #define TO_LITTLE_ENDIAN_16(x) x
 

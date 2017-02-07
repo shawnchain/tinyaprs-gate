@@ -139,7 +139,7 @@ static bool config_is_overwritten(char* key){
 }
 
 inline static void _assign_value_long(int32_t *out,char* str){
-	printf("convert long value: %s\n",str);
+	//printf("convert long value: %s\n",str);
 	int32_t val = atol(str);
 	if(val >=0) *out = val;
 }

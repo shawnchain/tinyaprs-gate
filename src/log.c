@@ -22,6 +22,14 @@ static FILE *logfile = NULL;
 #define to_append false
 #define to_overwrite true
 
+int log_fd(){
+	if(logfile){
+		return fileno(logfile);
+	}else{
+		return -1;
+	}
+}
+
 static int log_open(bool overwrite){
 	if(overwrite)
 		logfile = fopen(logfileName,"w");
@@ -31,14 +39,12 @@ static int log_open(bool overwrite){
 		//log_log("ERROR",__FILE__,"open log file failed, %s",logfileName);
 		printf("open log file failed, %s\n",logfileName);
 		return -1;
-	}else{
-		//log_log("INFO ",__FILE__,"open log file success, %s",logfileName);
-		printf("open log file success, %s\n",logfileName);
 	}
 
 	// get log file size if appending
 	if(overwrite){
 		logSize = 0;
+		printf("open log file [%s] success\n",logfileName);
 	}else{
 		// appending mode, get existing file size
 		struct stat st;
@@ -46,7 +52,7 @@ static int log_open(bool overwrite){
 		stat(logfileName,&st);
 		logSize = st.st_size;
 		//log_log("INFO ",__FILE__,"log file size, %d",logSize);
-		printf("log file size, %d\n",(int)logSize);
+		printf("open log file %s success, file size: %d\n",logfileName,(int)logSize);
 	}
 	return 0;
 }

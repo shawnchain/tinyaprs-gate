@@ -8,6 +8,8 @@
 #ifndef SRC_KISS_H_
 #define SRC_KISS_H_
 
+#include "iokit.h"
+
 //typedef struct KissReader {
 //	//uint8_t buf[ CONFIG_AX25_FRAME_BUF_LEN ];
 //	uint8_t *buf;

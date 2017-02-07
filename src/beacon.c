@@ -5,13 +5,12 @@
  *      Author: shawn
  */
 
-#include "tier2_client.h"
-
 #include <string.h>
 #include <time.h>
-#include "tier2_client.h"
 #include "utils.h"
 #include "config.h"
+#include "is_connector.h"
+#include "is_connector.h"
 
 typedef struct APRSMsg{
 	char type[1];
@@ -72,7 +71,7 @@ int beacon_run(){
 		payload[i++] = '\n';
 		payload[i] = '\0';
 		DBG("\n>Beaconing: %.*s",i - 2,payload);
-		int rc = tier2_client_publish(payload,i);
+		int rc = is_connector_publish(payload,i);
 		if(rc < 0){
 			DBG("Beaconing failed, %d",rc);
 		}
