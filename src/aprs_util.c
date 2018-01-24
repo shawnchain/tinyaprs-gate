@@ -17,20 +17,21 @@
 //#ifdef APRS_UTIL_STANDALONE
 static void aprsutil_usage(int argc, char* argv[]){
 	printf("APRS Utils\n");
-	printf("    aprsutil location LAT,LON\t\tConvert the APRS location\n");
-	printf("    aprsutil hash CALLSIGN\t\tPrint the passcode\n");
+	printf("    tinyaprs-util location LAT,LON\t\tConvert the APRS location\n");
+	printf("    tinyaprs-util hash CALLSIGN\t\tPrint the passcode\n");
+	printf("    tinyaprs-util md5 FILE\t\tPrint the MD5 of file\n");
 }
 
 static void aprsutil_location(int argc, char* argv[]){
 	char buf[64];
 	aprs_calc_location(argv[2],buf,sizeof(buf) -1);
-	printf("APRS Location: %s\n",buf);
+	printf("APRS Location-> %s\n",buf);
 }
 
 static void aprsutil_hash(int argc, char* argv[]){
 	char* callsign = argv[1];
 	short hash = aprs_calc_hash(callsign);
-	printf("%s -> %d\n",callsign,hash);
+	printf("%s-> %d\n",callsign,hash);
 }
 
 static void aprsutil_md5(int argc, char* argv[]){

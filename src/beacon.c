@@ -9,8 +9,7 @@
 #include <time.h>
 #include "utils.h"
 #include "config.h"
-#include "is_connector.h"
-#include "is_connector.h"
+#include "t2_connector.h"
 
 typedef struct APRSMsg{
 	char type[1];
@@ -71,7 +70,7 @@ int beacon_run(){
 		payload[i++] = '\n';
 		payload[i] = '\0';
 		DBG("\n>Beaconing: %.*s",i - 2,payload);
-		int rc = is_connector_publish(payload,i);
+		int rc = t2_connector_publish(payload,i);
 		if(rc < 0){
 			DBG("Beaconing failed, %d",rc);
 		}

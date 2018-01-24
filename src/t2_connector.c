@@ -5,7 +5,7 @@
  *      Author: shawn
  */
 
-#include "is_connector.h"
+#include "t2_connector.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +71,7 @@ static void tier2_client_poll_callback(int fd, io_state state){
 
 static char server[64];
 
-int is_connector_init(const char* _host){
+int t2_connector_init(const char* _host){
 	// copy the parameters
 	strncpy(server,_host,63);
 
@@ -98,7 +98,7 @@ int is_connector_init(const char* _host){
 #define IDLE_TIMEOUT 90
 static int32_t current_reconnect_waittime = RECONNECT_WAITTIME;
 
-int is_connector_run(){
+int t2_connector_run(){
 	time_t t = time(NULL);
 	if(state == state_disconnected){
 		// try to reconnect
@@ -258,7 +258,7 @@ static int tier2_client_receive(int _sockfd) {
 		char loginCmd[512];
 		int cmdLen = snprintf(loginCmd,511,LOGIN_CMD,config.callsign,config.passcode,config.filter);
 		INFO("Login Request: %.*s",cmdLen - 2 /*not logging the trailing CRLF chars*/, loginCmd);
-		is_connector_send(loginCmd,cmdLen); // send login command
+		t2_connector_send(loginCmd,cmdLen); // send login command
 		break;
 	case state_server_prompt:
 		//TODO - check  server login respond
@@ -285,7 +285,7 @@ static int tier2_client_receive(int _sockfd) {
 	return 0;
 }
 
-int is_connector_send(const char* data,size_t len){
+int t2_connector_send(const char* data,size_t len){
 	int rc;
 	if(sockfd < 0){
 		return -1;
@@ -298,7 +298,7 @@ int is_connector_send(const char* data,size_t len){
 	return rc;
 }
 
-int is_connector_publish(const char* message, size_t len){
+int t2_connector_publish(const char* message, size_t len){
 	if(state != state_server_verified){
 		if(state == state_server_unverified)
 			INFO("publish message aborted because callsign %.9s is NOT verified.",config.callsign);
@@ -306,12 +306,12 @@ int is_connector_publish(const char* message, size_t len){
 			INFO("publish message aborted because tier2 connector is not ready yet.");
 		return -1;
 	}
-	return is_connector_send(message,len);
+	return t2_connector_send(message,len);
 }
 
 // keep alive
 static void tier2_client_keepalive() {
 	DBG("Sending keep-alive command.");
-	is_connector_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
+	t2_connector_send(KEEPALIVE_CMD,strlen(KEEPALIVE_CMD));
 	last_keepalive = time(NULL);
 }

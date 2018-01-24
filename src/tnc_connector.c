@@ -31,7 +31,6 @@
 
 
 #include "config.h"
-#include "is_connector.h"
 
 TNC tnc; // shared device instance
 
