@@ -21,7 +21,7 @@ typedef struct APRSMsg{
 
 #define BEACON_INTERVAL 300
 // TODO - configurable beacon message
-static char* DST = "APTI01";
+static char* DST = "APTBGW";
 static APRSMsg aprs = {
 		.type = "!",
 		/*
