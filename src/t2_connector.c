@@ -163,7 +163,7 @@ static int tier2_client_connect() {
 		tier2_client_disconnect();
 		return -EAGAIN;
 	}
-	set_nonblock(sockfd);
+	set_nonblock(sockfd, true);
 	io_add(sockfd,tier2_client_poll_callback);
 
 	state = state_connected;

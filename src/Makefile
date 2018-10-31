@@ -11,13 +11,16 @@ endif
 GIT_VERSION := $(shell git describe --abbrev=6 --always --tags)
 
 CC ?= gcc
-CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\"
+CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I .
+
+CXX ?= g++
+CPPFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I .
+
 HEADERS = tinyaprs_gate.h \
-	t2_connector.h \
-	tnc_connector.h \
+	tier2_client.h \
 	beacon.h \
 	utils.h \
-	serial_port.h \
+	serial.h \
 	slre.h \
 	kiss.h \
 	ax25.h \
@@ -25,16 +28,15 @@ HEADERS = tinyaprs_gate.h \
 	config.h \
 	log.h \
 	iokit.h \
-	
+	modem.h 
 
 all: tinyaprs tinyaprs-util tinyaprs-cfg 
 
-SRC = tinyaprs_gate.o \
-	t2_connector.o \
-	tnc_connector.o \
+OBJ = tinyaprs_gate.o \
+	tier2_client.o \
 	beacon.o \
 	utils.o \
-	serial_port.o \
+	serial.o \
 	slre.o \
 	kiss.o \
 	ax25.o \
@@ -42,21 +44,47 @@ SRC = tinyaprs_gate.o \
 	config.o \
 	log.o \
 	iokit.o \
-	
-tinyaprs: $(SRC)
+	modem.o
+
+LIB_OBJ = libubox/uloop.o \
+	libubox/uloop.o \
+	libubox/usock.o \
+	libubox/ustream.o \
+	libubox/ustream-fd.o \
+	libubox/utils.o
+
+# LIB_OBJ += libubox_cpp/ULoop.o \
+# 	libubox_cpp/ULog.o \
+# 	libubox_cpp/XStream.o \
+# 	libubox_cpp/XStreamCodec.o
+
+LIB_OBJ += xstream.o
+
+libubox.a: $(LIB_OBJ)
+	ar rcs libubox.a $(LIB_OBJ)
+
+libs: libubox.a
+
+tinyaprs: $(OBJ) $(LIB_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
 tinyaprs-util: aprs_util.o utils.o log.o hash.o
 	$(CC) $(LDFLAGS) -o $@ $^
 	
-tinyaprs-cfg: tnc_config.o utils.o log.o serial_port.o
+tinyaprs-cfg: tnc_config.o utils.o log.o serial.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
-tncmock: tnc_mock.o utils.o log.o serial_port.o ax25.o kiss2.o
+tncmock: tnc_mock.o utils.o log.o serial.o ax25.o kiss2.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+libubox/%.o: libubox/%.c $(HEADERS)
+	$(CC) $(CFLAGS)  -c -o $@ $<
+
+libubox_cpp/%.o: libubox_cpp/%.cpp $(HEADERS)
+	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
 install: tinyaprs 
 	cp -f tinyaprs $(PREFIX)/sbin/
@@ -64,4 +92,4 @@ install: tinyaprs
 	cp -f tinyaprs-cfg  $(PREFIX)/sbin/
 
 clean:
-	rm -f tinyaprs tinyaprs-util  tinyaprs-cfg tncmock *.o
+	rm -f tinyaprs tinyaprs-util  tinyaprs-cfg tncmock *.o libubox/*.o libubox_cpp/*.o *.a

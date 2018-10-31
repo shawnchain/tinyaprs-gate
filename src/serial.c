@@ -15,12 +15,12 @@
 #include <unistd.h>
 
 #include "utils.h"
-#include "serial_port.h"
+#include "serial.h"
 
 /**
  * Setup port with 8bits, no parity, 1 stop bit
  */
-static int serial_port_setup(int fd, int speed){
+static int serial_setup(int fd, int speed){
     struct termios tty;
 
     if (tcgetattr(fd, &tty) < 0) {
@@ -72,7 +72,7 @@ static int _select_baudrate(int input){
 	}
 }
 
-int serial_port_open(const char* portname,int32_t baudrate){
+int serial_open(const char* portname,int32_t baudrate){
 	int fd;
 #ifdef __APPLE__
 	// open will block if O_NONBLOCK is not set
@@ -89,25 +89,15 @@ int serial_port_open(const char* portname,int32_t baudrate){
     	ERROR("*** unsupported baudrate %d",baudrate);
     	return -1;
     }
-    if(serial_port_setup(fd,speed) < 0){
+    if(serial_setup(fd,speed) < 0){
     	close(fd);
     	fd = -1;
     }
 
 #ifdef __APPLE__
-    serial_port_set_nonblock(fd,0);
+    set_nonblock(fd,false);
 #endif
     return fd;
-}
-
-int serial_port_set_nonblock(int fd,int nonblock){
-	int flag = fcntl(fd, F_GETFD, 0);
-	if(nonblock){
-		flag |= O_NONBLOCK;
-	}else{
-		flag &= ~O_NONBLOCK;
-	}
-	return fcntl(fd, F_SETFL, flag);
 }
 
 #if 0

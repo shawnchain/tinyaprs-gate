@@ -11,14 +11,17 @@
 #include "log.h"
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <stddef.h>
 #include <netdb.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
+
 #ifdef __APPLE__
 #include <sys/filio.h>
 #endif
+
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -47,10 +50,30 @@ struct sockaddr_inx {
 
 int resolve_host(const char *hostname_port_pair, struct sockaddr_inx *sa);
 
-static inline int set_nonblock(int sockfd) {
-	if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0) | O_NONBLOCK) == -1)
-		return -1;
-	return 0;
+static inline int set_nonblock(int fd,bool nonblock){
+	int flag = fcntl(fd, F_GETFD, 0);
+	if(nonblock){
+		flag |= O_NONBLOCK;
+	}else{
+		flag &= ~O_NONBLOCK;
+	}
+	return fcntl(fd, F_SETFL, flag);
+}
+
+static inline bool can_write(int fd){
+	fd_set wset;
+	struct timeval timeo;
+	int rc;
+
+	FD_ZERO(&wset);
+	FD_SET(fd, &wset);
+	timeo.tv_sec = 0;
+	timeo.tv_usec = 0;
+	rc = select(fd + 1, NULL, &wset, NULL, &timeo);
+	if(rc >0 && FD_ISSET(fd, &wset)){
+		return true;
+	}
+	return false;
 }
 
 void hexdump(void *d, size_t len);

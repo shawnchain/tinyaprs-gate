@@ -15,12 +15,18 @@
 #include <netinet/in.h>
 
 #include "iokit.h"
-#include "tnc_connector.h"
+//#include "tnc_connector.h"
+#include "modem.h"
 #include "beacon.h"
 #include "ax25.h"
 #include "config.h"
-#include "t2_connector.h"
+//#include "t2_connector.h"
+#include <libubox/uloop.h>
+#include "tier2_client.h"
+
 #include "log.h"
+
+static struct tier2_client client;
 
 static int iserver_monitor_main();
 static int tnc_monitor_main();
@@ -144,7 +150,7 @@ static int gate_ax25_message(AX25Msg* msg){
 	// print to TNC-2 monitor format and publish
 	char txt[1024];
 	int len = ax25_print(txt,1021,msg);
-	if(t2_connector_publish(txt,len) < 0){
+	if(tier2_client_publish(&client, txt,len) < 0){
 		return -1;
 	}
 
@@ -205,11 +211,10 @@ static void parse_location_arg(char* loc){
 	}
 }
 
-int main(int argc, char* argv[]){
+static void parse_args(int argc, char** argv){
 	int opt;
-
 	while ((opt = getopt_long(argc, argv, "H:C:P:F:D:B:S:L:T:l:c:MIdh",
-				long_opts, NULL)) != -1) {
+			long_opts, NULL)) != -1) {
 		switch (opt){
 		case 'H': // host
 			config_overwrite_kv("server",optarg);
@@ -269,6 +274,10 @@ int main(int argc, char* argv[]){
 	if(appConfig.monitor_tnc || appConfig.server_monitor){
 		appConfig.in_background = false;
 	}
+}
+
+int main(int argc, char* argv[]){
+	parse_args(argc, argv);
 
 	if (appConfig.in_background){
 		do_daemonize();
@@ -286,16 +295,11 @@ int main(int argc, char* argv[]){
 	}
 
 	if((rc = log_init(config.logfile)) < 0){
-		ERROR("*** warning: log system initialize failed\n");
+		ERROR("*** warning: log system initialize failed, error: '%s'\n",strerror(errno));
 	}
 
 	if((rc = io_init()) < 0){
 		ERROR("*** error: initialize the poll module, aborted.");
-		exit(1);
-	}
-
-	if((rc = tnc_init(config.tnc[0].device,config.tnc[0].baudrate,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
-		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}
 
@@ -305,54 +309,61 @@ int main(int argc, char* argv[]){
 	}else if(appConfig.server_monitor){
 		iserver_monitor_main();
 	}else{
-		if((rc = t2_connector_init(config.server)) < 0){
+		INFO("Running TinyAPRS iGate Server");
+		uloop_init();
+		if((rc = modem_init(config.tnc[0].device,config.tnc[0].baudrate,config.tnc[0].model,NULL,tnc_ax25_message_received)) < 0){
+			ERROR("*** error: initialize the TNC module, aborted.");
+			goto exit;
+		}
+
+		if((rc = tier2_client_init(&client, config.server)) < 0){
 			ERROR("*** error initialize the APRS tier2 client, aborted.");
-			exit(1);
+			goto exit;
 		}
-		if((rc = beacon_init()) < 0){
+
+		if((rc = beacon_init(&client)) < 0){
 			ERROR("*** error initialize the Beacon module, aborted.");
-			exit(1);
+			goto exit;
 		}
-		// the main loop
-		while(true){
-			tnc_run();
-			if(! appConfig.monitor_tnc){
-				t2_connector_run();
-				beacon_run();
-			}
-			io_run();
-		}
+
+		uloop_run();
+
+exit:
+		uloop_end();
+		return rc < 0 ? 1:0;
 	}
 }
 
 static int iserver_monitor_main(){
 	INFO("Running APRS-IS Server Monitor");
+	uloop_init();
+
 	int rc = 0;
-	if((rc = t2_connector_init(config.server)) < 0){
+	if((rc = tier2_client_init(&client, config.server)) < 0){
 		ERROR("*** error initialize the APRS tier2 client, aborted.");
 		exit(1);
 	}
 
-	while(true){
-		t2_connector_run();
-		io_run();
-	}
+	uloop_run();
+	uloop_end();
+
 	return 0;
 }
 
+#include "modem.h"
+
 static int tnc_monitor_main(){
 	INFO("Running TNC Monitor");
-	/*
+	uloop_init();
+
+	//Modem modem;
 	int rc = 0;
-	if ((rc = tnc_init(config.tnc[0].device, config.tnc[0].baudrate, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
+	if ((rc = modem_init(config.tnc[0].device, config.tnc[0].baudrate, config.tnc[0].model, NULL, tnc_ax25_message_received)) < 0) {
 		ERROR("*** error: initialize the TNC module, aborted.");
 		exit(1);
 	}
-	*/
+	uloop_run();
+	uloop_end();
 
-	while(true){
-		tnc_run();
-		io_run();
-	}
 	return 0;
 }

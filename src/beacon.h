@@ -8,14 +8,10 @@
 #ifndef SRC_BEACON_H_
 #define SRC_BEACON_H_
 
+struct tier2_client;
 /**
  * Initialize the beacon
  */
-int beacon_init();
-
-/**
- * The beacon run loop
- */
-int beacon_run();
+int beacon_init(struct tier2_client *c);
 
 #endif /* SRC_BEACON_H_ */

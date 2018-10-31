@@ -20,7 +20,7 @@
 
 #include "utils.h"
 #include "log.h"
-#include "serial_port.h"
+#include "serial.h"
 
 #define KISS_FEND  0xc0
 #define KISS_FESC  0xdb
@@ -212,12 +212,12 @@ static int init(const char* serialPath){
 	if(serialPath == NULL){
 		serialPath = defaultSerialPath;
 	}
-	serial_fd = serial_port_open(serialPath,115200);
+	serial_fd = serial_open(serialPath,115200);
 	if(serial_fd < 0){
 		ERROR("Open serial port %s failed",serialPath);
 		return -1;
 	}
-	serial_port_set_nonblock(serial_fd,1);
+	set_nonblock(serial_fd,true);
 	return 0;
 }
 
