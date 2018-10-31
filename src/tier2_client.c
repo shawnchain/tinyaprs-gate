@@ -231,26 +231,6 @@ static void dump_server_messages(char* data,size_t len){
 	}
 }
 
-/*
- * remove the trailing CRLF for better log
- */
-static char* rightTrimCRLF(char *src, size_t len){
-#if 1
-	bool found = false;
-	int i = len;
-	while(i >0 ){
-		if(src[i] == '\r' || src[i] == '\n'){
-			found = true;
-			src[i] = 0;
-		}else if(found){
-			break;
-		}
-		i--;
-	}
-#endif
-	return src;
-}
-
 static int tier2_client_receive(struct tier2_client *c, char* data, int len) {
 	assert(len >0);
 	
@@ -260,7 +240,7 @@ static int tier2_client_receive(struct tier2_client *c, char* data, int len) {
 	switch(c->state){
 	case state_connected:
 		// send out login cmd when server greetings received.
-		INFO("Server Greeting: %s",rightTrimCRLF(data,len));
+		INFO("Server Greeting: %s",string_trim_crlf_r(data,len));
 		c->state = state_server_prompt;
 		char loginCmd[512];
 		int cmdLen = snprintf(loginCmd,511,T2_LOGIN_CMD,config.callsign,config.passcode,config.filter);
@@ -269,7 +249,7 @@ static int tier2_client_receive(struct tier2_client *c, char* data, int len) {
 		break;
 	case state_server_prompt:
 		//check  server login respond
-		INFO("Server Respond: %s",rightTrimCRLF(data,len));
+		INFO("Server Respond: %s",string_trim_crlf_r(data,len));
 		if(tier2_client_verifylogin(c, data,len)){
 			c->state = state_server_verified;
 		}else{

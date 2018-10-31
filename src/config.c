@@ -89,25 +89,6 @@ typedef enum{
 #define isspace(x) (x == ' ' || x == '\t')
 #endif
 
-// Note: This function returns a pointer to a substring of the original string.
-// If the given string was allocated dynamically, the caller must not overwrite
-// that pointer with the returned value, since the original pointer must be
-// deallocated using the same allocator with which it was allocated.  The return
-// value must NOT be deallocated using free() etc.
-char *trimwhitespace(char *str){
-  char *end;
-  // Trim leading space
-  while(isspace(*str)) str++;
-  if(*str == 0)  // All spaces?
-    return str;
-  // Trim trailing space
-  end = str + strlen(str) - 1;
-  while(end > str && isspace(*end)) end--;
-  // Write new null terminator
-  *(end+1) = 0;
-  return str;
-}
-
 static config_key config_get_key_index(char* key){
 	int i = 0;
 	for(i = 0;i < 32;i++){
@@ -385,8 +366,8 @@ static bool read_ini_file(FILE *file){
 		}
 		if(!k || !v) continue;
 
-		k = trimwhitespace(k);
-		v = trimwhitespace(v);
+		k = string_trim_space(k);
+		v = string_trim_space(v);
 
 		if(config_is_overwritten(k)){
 			config_key keyIndex = config_get_key_index(k);

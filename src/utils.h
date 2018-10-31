@@ -79,6 +79,9 @@ static inline bool can_write(int fd){
 void hexdump(void *d, size_t len);
 void stringdump(void *d, size_t len);
 
+char* string_trim_crlf_r(char *src, size_t len);
+
+char * string_trim_space(char *str);
 
 int do_daemonize(void);
 
