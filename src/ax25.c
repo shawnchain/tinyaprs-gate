@@ -36,7 +36,7 @@ int ax25_make(const char* src, const char* dst, const char** rpt, const char* pa
  * | DST_ID(7) |SRC_ID(7) | RPT_LIST(7 * 8) | CTRL(0x03) | PID(0xF0) | PAYLOAD |
  */
 int ax25_decode(uint8_t *data, size_t len, AX25Msg *msg){
-	bzero(msg,sizeof(AX25Msg));
+	memset(msg,0,sizeof(AX25Msg));
 	if(len < 17){
 		return -1;
 	}

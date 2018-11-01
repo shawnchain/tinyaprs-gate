@@ -32,6 +32,8 @@ struct xstream_ctx {
 
 	unsigned int    bytesRead;
 	unsigned int    bytesConsumed;
+
+	void			*obj;
 };
 
 struct xstream {
@@ -40,9 +42,9 @@ struct xstream {
 	xstream_write_callback 	on_write_cb;
 	xstream_error_callback	on_error_cb;
 
-	struct xstream_ctx ctx;
-	xstream_decode_func decode_func;
-	unsigned int 		decode_opts;
+	struct xstream_ctx 		ctx;
+	xstream_decode_func 	decode_func;
+	unsigned int 			decode_opts;
 };
 
 void xstream_crlf_init(struct xstream *x, int fd, int init_opts, xstream_read_callback on_read, xstream_write_callback on_write, xstream_error_callback on_error);
@@ -52,5 +54,7 @@ void xstream_init(struct xstream *x, int fd, xstream_read_callback on_read, xstr
 void xstream_set_decode_func(struct xstream *x, xstream_decode_func decode_func);
 
 void xstream_free(struct xstream *x);
+
+bool xstream_decode_crlf(struct xstream_ctx *ctx, struct ustream *s);
 
 #endif

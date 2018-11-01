@@ -38,7 +38,7 @@ OBJ = tinyaprs_gate.o \
 	utils.o \
 	serial.o \
 	slre.o \
-	kiss.o \
+	kiss_codec.o \
 	ax25.o \
 	json.o \
 	config.o \

@@ -15,16 +15,22 @@
 #include <netinet/in.h>
 
 #include "iokit.h"
-//#include "tnc_connector.h"
 #include "modem.h"
 #include "beacon.h"
 #include "ax25.h"
 #include "config.h"
-//#include "t2_connector.h"
 #include <libubox/uloop.h>
 #include "tier2_client.h"
 
 #include "log.h"
+
+typedef struct {
+	bool in_background;
+	bool monitor_tnc;
+	bool server_monitor;
+	char pid_file[64];
+	char config_file[64];
+}AppConfig;
 
 static struct tier2_client client;
 

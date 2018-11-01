@@ -11,15 +11,19 @@ static void ustream_notify_read(struct ustream *s, int bytes){
 
 	if (x->decode_func(&x->ctx, &x->stream_fd.stream)){
 		if(x->on_read_cb) {
-			x->on_read_cb(x, x->ctx.data,x->ctx.dataLen);
+			x->on_read_cb(x, x->ctx.data, x->ctx.dataLen);
 		}
 
 		// we're done
+		struct xstream_ctx *ctx = &x->ctx;
+		ctx->bytesRead = 0;
+		ctx->decodeBufOffset = 0;
+		ctx->dataLen = 0;
+	}
+
+	if (x->ctx.bytesConsumed > 0) {
 		ustream_consume(s,x->ctx.bytesConsumed);
 		x->ctx.bytesConsumed = 0;
-		x->ctx.bytesRead = 0;
-		x->ctx.decodeBufOffset = 0;
-		x->ctx.dataLen = 0;
 	}
 }
 
@@ -56,12 +60,12 @@ static bool xstream_decode_default(struct xstream_ctx *ctx, struct ustream *s){
 }
 
 /* the CRLF decoder */
-static bool xstream_decode_crlf(struct xstream_ctx *ctx, struct ustream *s){
+bool xstream_decode_crlf(struct xstream_ctx *ctx, struct ustream *s){
 	int len = 0;
 	char *data = ustream_get_read_buf(s, &len);
 
 	while(ctx->bytesRead < len /*all bytes available in ustream read buffer*/){
-		if (data[ctx->bytesRead] == '\n' || data[ctx->decodeBufOffset] == '\r') {
+		if (data[ctx->bytesRead] == '\n' || data[ctx->bytesRead] == '\r') {
 			// consume the crlf as well
 			ctx->data = data;
 			ctx->dataLen = ctx->bytesRead;
