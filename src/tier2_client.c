@@ -55,6 +55,10 @@ static void timeout_handler(struct uloop_timeout *t){
 }
 
 static void on_stream_read(struct xstream *x, char *data, int len){
+	if (len == 0){
+		// ignore blank line
+		return;
+	}
 	struct tier2_client *c = container_of(x, struct tier2_client, stream);
 	tier2_client_receive(c, data, len);
 }
@@ -215,20 +219,10 @@ const char* T2_LOGIN_CMD = "user %s pass %s vers TinyAPRS 0.1 filter %s\r\n";
 const char* T2_KEEPALIVE_CMD = "#TinyAprsGate 0.1\r\n";
 
 /*
- * dump server message, which is CRLF ended
+ * dump server message
  */
-static void dump_server_messages(char* data,size_t len){
-	int i = 0;
-	char* start = data;
-	while(data[i] != 0 && i < len){
-		if(data[i] == '\r' || data[i] == '\n'){
-			data[i] = 0;
-			if(data + i - start >1)
-				printf(">From IS: %s\n",start);
-			start = (data + i + 1);
-		}
-		i++;
-	}
+static void dump_server_messages(char* data, int len){
+	printf(">From IS: %.*s\n", len, data);
 }
 
 static int tier2_client_receive(struct tier2_client *c, char* data, int len) {
@@ -260,7 +254,7 @@ static int tier2_client_receive(struct tier2_client *c, char* data, int len) {
 	case state_server_unverified:
 	case state_server_verified:
 		// should send update to server!
-		if(len > 0 && data[0] != '#'){
+		if(data[0] != '#'){
 			dump_server_messages(data,len);
 		}
 		break;

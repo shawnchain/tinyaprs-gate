@@ -14,13 +14,13 @@
 
 // xstream callbacks
 struct xstream;
-typedef void (*xstream_read_callback)(struct xstream *x, char *bytes, int len);
+typedef void (*xstream_read_callback) (struct xstream *x, char *bytes, int len);
 typedef void (*xstream_write_callback)(struct xstream *x, int len);
 typedef void (*xstream_error_callback)(struct xstream *x);
 
 // xstream codec implementation
 struct xstream_ctx;
-typedef bool (*xstream_decode_func)(struct xstream_ctx *ctx, struct ustream *s);
+typedef bool (*xstream_decode_func)(struct xstream_ctx *ctx, struct ustream *s, unsigned int opt);
 
 struct xstream_ctx {
 	char			*data;
@@ -55,6 +55,6 @@ void xstream_set_decode_func(struct xstream *x, xstream_decode_func decode_func)
 
 void xstream_free(struct xstream *x);
 
-bool xstream_decode_crlf(struct xstream_ctx *ctx, struct ustream *s);
+bool xstream_decode_crlf(struct xstream_ctx *ctx, struct ustream *s, unsigned int opt);
 
 #endif
