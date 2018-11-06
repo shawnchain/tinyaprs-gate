@@ -312,11 +312,11 @@ static int tnc_parse_device_info(uint8_t* data, size_t len){
 
 static void tnc_switch_mode(modem_mode mode){
 	if(mode == mode_kiss){
-		//TODO - switch decoder to CRLF or KISS 
-		xstream_set_decode_func(&stream,(xstream_decode_func)kiss_decode);
+		//switch decoder to CRLF or KISS
+		xstream_set_codec(&stream, xstream_codec_kiss());
 		kissMode = true;
 	}else{
-		xstream_set_decode_func(&stream,(xstream_decode_func)xstream_decode_crlf);
+		xstream_set_codec(&stream, xstream_codec_crlf());
 		kissMode = false;
 	}
 }
