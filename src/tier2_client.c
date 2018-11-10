@@ -4,11 +4,11 @@
  *  Created on: 2016年8月29日
  *      Author: shawn
  */
-
 #include "tier2_client.h"
 
-#include <libubox/uloop.h>
-#include "xstream.h"
+#include "config.h"
+
+#include "slre.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,13 +26,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-
-#include "tinyaprs_gate.h"
-#include "utils.h"
-#include "slre.h"
-
-#include "config.h"
-#include "iokit.h"
 
 typedef enum{
 	state_disconnected = 0,

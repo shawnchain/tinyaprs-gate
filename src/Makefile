@@ -16,7 +16,7 @@ CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I. -Ilibubox
 CXX ?= g++
 CPPFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I. -Ilibubox
 
-HEADERS = tinyaprs_gate.h \
+HEADERS = \
 	tier2_client.h \
 	beacon.h \
 	utils.h \
@@ -29,9 +29,9 @@ HEADERS = tinyaprs_gate.h \
 	log.h \
 	modem.h 
 
-all: tinyaprs tinyaprs-util tinyaprs-cfg 
+all: tinyaprsd tinyaprs-util tinyaprs-cfg 
 
-OBJ = tinyaprs_gate.o \
+OBJ = tinyaprsd.o \
 	tier2_client.o \
 	beacon.o \
 	utils.o \
@@ -58,7 +58,7 @@ libubox.a: $(LIB_OBJ)
 
 libs: libubox.a
 
-tinyaprs: $(OBJ) $(LIB_OBJ)
+tinyaprsd: $(OBJ) $(LIB_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ 
 
 tinyaprs-util: aprs_util.o utils.o log.o hash.o
@@ -79,10 +79,10 @@ libubox/%.o: libubox/%.c $(HEADERS)
 libubox_cpp/%.o: libubox_cpp/%.cpp $(HEADERS)
 	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
-install: tinyaprs 
-	cp -f tinyaprs $(PREFIX)/sbin/
+install: tinyaprsd 
+	cp -f tinyaprsd $(PREFIX)/sbin/
 	cp -f tinyaprs-util $(PREFIX)/sbin/
 	cp -f tinyaprs-cfg  $(PREFIX)/sbin/
 
 clean:
-	rm -f tinyaprs tinyaprs-util  tinyaprs-cfg tncmock *.o libubox/*.o libubox_cpp/*.o *.a
+	rm -f tinyaprsd tinyaprs-util  tinyaprs-cfg tncmock *.o libubox/*.o libubox_cpp/*.o *.a

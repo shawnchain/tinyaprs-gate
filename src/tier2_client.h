@@ -8,7 +8,7 @@
 #ifndef TIER2_CLIENT_H_
 #define TIER2_CLIENT_H_
 
-#include "xstream.h"
+#include "libubox/xstream.h"
 #include "utils.h"
 
 struct tier2_client{
