@@ -11,10 +11,10 @@ endif
 GIT_VERSION := $(shell git describe --abbrev=6 --always --tags)
 
 CC ?= gcc
-CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I .
+CFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I. -Ilibubox
 
 CXX ?= g++
-CPPFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I .
+CPPFLAGS += -Wall -ggdb -DDEBUG -DVERSION=\"$(GIT_VERSION)\" -I. -Ilibubox
 
 HEADERS = tinyaprs_gate.h \
 	tier2_client.h \
@@ -51,12 +51,7 @@ LIB_OBJ = libubox/uloop.o \
 	libubox/ustream-fd.o \
 	libubox/utils.o
 
-# LIB_OBJ += libubox_cpp/ULoop.o \
-# 	libubox_cpp/ULog.o \
-# 	libubox_cpp/XStream.o \
-# 	libubox_cpp/XStreamCodec.o
-
-LIB_OBJ += xstream.o
+LIB_OBJ += libubox/xstream.o
 
 libubox.a: $(LIB_OBJ)
 	ar rcs libubox.a $(LIB_OBJ)
@@ -72,7 +67,7 @@ tinyaprs-util: aprs_util.o utils.o log.o hash.o
 tinyaprs-cfg: tnc_config.o utils.o log.o serial.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
-tncmock: tnc_mock.o utils.o log.o serial.o ax25.o kiss_codec.o xstream.o $(LIB_OBJ)
+tncmock: tnc_mock.o utils.o log.o serial.o ax25.o kiss_codec.o $(LIB_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c $(HEADERS)
