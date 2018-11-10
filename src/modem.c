@@ -130,11 +130,6 @@ static int modem_open(){
 	tncErrorCount = 0;
 	last_keepalive = 0;
 
-// #if 1
-// 	io_init_stream_reader(&reader,modem_fd,read_buffer,MAX_READ_BUFFER_LEN,350/*read timeout set to 350ms*/,tnc_received);
-// #else
-// 	io_init_line_reader(&reader,modem_fd,read_buffer,MAX_READ_BUFFER_LEN,tnc_received);
-// #endif
 	INFO("modem \'%s\' opened, baudrate=%d, fd=%d",modem.path, modem.speed, modem_fd);
 
 	// initialize
@@ -142,7 +137,6 @@ static int modem_open(){
 
 	// set unblock and select
 	set_nonblock(modem_fd,true);
-	//io_add(modem_fd,tnc_poll_callback);
 	return 0;
 }
 
@@ -154,12 +148,9 @@ static int modem_close(){
 
 		xstream_free(&stream);
 
-		//io_remove(modem_fd);
 		close(modem_fd);
 		modem_fd = -1;
-		//reader.fd = -1;
 	}
-	//reader.fnClose(&reader);
 	state = state_close;
 	INFO("modem \'%s\' closed.", modem.path);
 	return 0;
@@ -396,10 +387,6 @@ static int modem_run(){
 	default:
 		break;
 	}
-
-	// io reader runloop;
-	// if(reader.fnRun)
-	// 	reader.fnRun(&reader);
 
 	return 0;
 }

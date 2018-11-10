@@ -152,9 +152,10 @@ static bool kiss_decode(struct xstream_ctx *ctx, char *data, int *len){
         ctx->currentObj = &_framebuf.obj;
     }
 
+    // cast the generic xobj to kiss_frame
+    KissFrame *f = container_of(ctx->currentObj, KissFrame, obj);
     int i = 0;
 	for(;i<(*len);i++){
-        KissFrame *f = container_of(ctx->currentObj, KissFrame, obj);
         if (kiss_decode_byte(ctx, data[i],f)) {
             *len = i+1;
             return true;

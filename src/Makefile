@@ -22,12 +22,11 @@ HEADERS = tinyaprs_gate.h \
 	utils.h \
 	serial.h \
 	slre.h \
-	kiss.h \
+	kiss_codec.h \
 	ax25.h \
 	json.h \
 	config.h \
 	log.h \
-	iokit.h \
 	modem.h 
 
 all: tinyaprs tinyaprs-util tinyaprs-cfg 
@@ -43,7 +42,6 @@ OBJ = tinyaprs_gate.o \
 	json.o \
 	config.o \
 	log.o \
-	iokit.o \
 	modem.o
 
 LIB_OBJ = libubox/uloop.o \
@@ -74,7 +72,7 @@ tinyaprs-util: aprs_util.o utils.o log.o hash.o
 tinyaprs-cfg: tnc_config.o utils.o log.o serial.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
-tncmock: tnc_mock.o utils.o log.o serial.o ax25.o kiss2.o
+tncmock: tnc_mock.o utils.o log.o serial.o ax25.o kiss_codec.o xstream.o $(LIB_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c $(HEADERS)

@@ -1,5 +1,14 @@
 #include "tinyaprs_gate.h"
 
+#include "modem.h"
+#include "beacon.h"
+#include "config.h"
+#include "tier2_client.h"
+#include "ax25.h"
+#include "log.h"
+
+#include <libubox/uloop.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,15 +23,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#include "iokit.h"
-#include "modem.h"
-#include "beacon.h"
-#include "ax25.h"
-#include "config.h"
-#include <libubox/uloop.h>
-#include "tier2_client.h"
-
-#include "log.h"
 
 typedef struct {
 	bool in_background;
@@ -120,7 +120,7 @@ static char APRS_RX_NO_RELAY_PAYLOAD_PREFIX[8][16] = {
 		""
 };
 
-static int gate_ax25_message(AX25Msg* msg){
+static int relay_ax25_message(AX25Msg* msg){
 	if(msg->len == 0) return -1;
 	if(msg->rpt_cnt == 8) return -1;
 
@@ -181,7 +181,7 @@ static void tnc_ax25_message_received(AX25Msg* msg){
 		return;
 	}
 
-	if(gate_ax25_message(msg) < 0){
+	if(relay_ax25_message(msg) < 0){
 		//DBG("TNC Received %d bytes",len);
 		INFO("relay message to tier2 server failed");
 	}else{
@@ -302,11 +302,6 @@ int main(int argc, char* argv[]){
 
 	if((rc = log_init(config.logfile)) < 0){
 		ERROR("*** warning: log system initialize failed, error: '%s'\n",strerror(errno));
-	}
-
-	if((rc = io_init()) < 0){
-		ERROR("*** error: initialize the poll module, aborted.");
-		exit(1);
 	}
 
 	// don't initialize tier2 connect and beacon under monitor mode

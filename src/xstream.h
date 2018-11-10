@@ -12,7 +12,9 @@
 
 #define XSTREAM_KEEP_CRLF  1
 
-// xstream object
+/*
+ * The xstream object
+ */
 struct xstream_obj {
 	char			type[4];
 	char			*data;
@@ -88,5 +90,7 @@ const struct xstream_codec* xstream_codec_crlf();
  * Set codec of an xstream
  */
 void xstream_set_codec(struct xstream *x, const struct xstream_codec *codec);
+
+int xstream_write(struct xstream *x, char* bytes, int len);
 
 #endif

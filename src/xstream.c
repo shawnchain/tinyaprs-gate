@@ -204,3 +204,6 @@ void xstream_free(struct xstream *x){
     }
 }
 
+int xstream_write(struct xstream *x, char* bytes, int len){
+	return ustream_write(&x->stream_fd.stream, bytes, len, false);
+}
