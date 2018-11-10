@@ -70,7 +70,7 @@ static struct option long_opts[] = {
 #endif
 
 static void print_help(int argc, char *argv[]){
-	printf("TinyAPRS iGate Daemon, ver 0.5(%s)\n",VERSION);
+	printf("TinyAPRS iGate Daemon, ver 1.0(%s)\n",VERSION);
 	printf("Usage:\n");
 	printf("  %s [options]\n", argv[0]);
 	printf("Options:\n");

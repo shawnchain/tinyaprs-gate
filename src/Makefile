@@ -1,7 +1,7 @@
 #
-# Copyright (c) 2015 Justin Lopyright (c) 2016 Shawn Chain
+# Copyright (c) 2016,2017,2018 Shawn Chain
 # Author: Shawn Chain (shawn.chain@gmail.com)
-# https://github.com/shawnchain/tinyaprs-gate/
+# https://github.com/shawnchain/tinyaprsd/
 #
 
 ifeq ($(PREFIX),)
